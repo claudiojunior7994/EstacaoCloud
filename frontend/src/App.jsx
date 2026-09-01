@@ -37,6 +37,38 @@ function App() {
     }
   }, [produtos])
 
+  const fornecedorVazio = {
+    nome: '',
+    cnpj: '',
+    telefone: '',
+    email: '',
+  }
+
+  const [fornecedores, setFornecedores] = useState(() => {
+    try {
+      const fornecedoresSalvos = localStorage.getItem('estacaocloud-fornecedores')
+      return fornecedoresSalvos ? JSON.parse(fornecedoresSalvos) : []
+    } catch {
+      return []
+    }
+  })
+  const [buscaFornecedor, setBuscaFornecedor] = useState('')
+  const [fornecedorEmEdicao, setFornecedorEmEdicao] = useState(null)
+  const [mostrarFormularioFornecedor, setMostrarFormularioFornecedor] =
+    useState(false)
+  const [novoFornecedor, setNovoFornecedor] = useState(fornecedorVazio)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        'estacaocloud-fornecedores',
+        JSON.stringify(fornecedores),
+      )
+    } catch (erro) {
+      console.error('Erro ao salvar fornecedores:', erro)
+    }
+  }, [fornecedores])
+
   const paginas = {
     'visao-geral': {
       titulo: 'Visão geral',
@@ -77,6 +109,7 @@ function App() {
   function abrirPagina(nomePagina) {
     setPagina(nomePagina)
     setMostrarFormularioProduto(false)
+    setMostrarFormularioFornecedor(false)
   }
 
   function abrirCadastroProduto() {
@@ -173,6 +206,87 @@ function App() {
     }
   }
 
+  function abrirCadastroFornecedor() {
+    setPagina('fornecedores')
+    setFornecedorEmEdicao(null)
+    setNovoFornecedor(fornecedorVazio)
+    setMostrarFormularioFornecedor(true)
+  }
+
+  function fecharCadastroFornecedor() {
+    setMostrarFormularioFornecedor(false)
+    setFornecedorEmEdicao(null)
+    setNovoFornecedor(fornecedorVazio)
+  }
+
+  function alterarCampoFornecedor(evento) {
+    const { name, value } = evento.target
+    setNovoFornecedor((fornecedorAtual) => ({
+      ...fornecedorAtual,
+      [name]: value,
+    }))
+  }
+
+  function salvarFornecedor(evento) {
+    evento.preventDefault()
+
+    if (!novoFornecedor.nome.trim()) {
+      alert('Preencha pelo menos o nome do fornecedor.')
+      return
+    }
+
+    const dadosFornecedor = {
+      nome: novoFornecedor.nome.trim(),
+      cnpj: novoFornecedor.cnpj.trim(),
+      telefone: novoFornecedor.telefone.trim(),
+      email: novoFornecedor.email.trim(),
+    }
+
+    if (fornecedorEmEdicao) {
+      setFornecedores((listaAtual) =>
+        listaAtual.map((fornecedor) =>
+          fornecedor.id === fornecedorEmEdicao.id
+            ? { ...fornecedor, ...dadosFornecedor }
+            : fornecedor,
+        ),
+      )
+    } else {
+      setFornecedores((listaAtual) => [
+        ...listaAtual,
+        { id: Date.now(), ...dadosFornecedor },
+      ])
+    }
+
+    fecharCadastroFornecedor()
+  }
+
+  function editarFornecedor(fornecedor) {
+    setFornecedorEmEdicao(fornecedor)
+    setNovoFornecedor({
+      nome: fornecedor.nome || '',
+      cnpj: fornecedor.cnpj || '',
+      telefone: fornecedor.telefone || '',
+      email: fornecedor.email || '',
+    })
+    setMostrarFormularioFornecedor(true)
+  }
+
+  function excluirFornecedor(fornecedor) {
+    const confirmou = window.confirm(
+      `Deseja realmente excluir o fornecedor "${fornecedor.nome}"?`,
+    )
+
+    if (!confirmou) return
+
+    setFornecedores((listaAtual) =>
+      listaAtual.filter((item) => item.id !== fornecedor.id),
+    )
+
+    if (fornecedorEmEdicao?.id === fornecedor.id) {
+      fecharCadastroFornecedor()
+    }
+  }
+
   function formatarMoeda(valor) {
     return Number(valor || 0).toLocaleString('pt-BR', {
       style: 'currency',
@@ -205,6 +319,19 @@ function App() {
       produto.nome.toLowerCase().includes(termoBuscaProduto) ||
       produto.codigoBarras.toLowerCase().includes(termoBuscaProduto) ||
       produto.categoria.toLowerCase().includes(termoBuscaProduto)
+    )
+  })
+
+  const termoBuscaFornecedor = buscaFornecedor.trim().toLowerCase()
+
+  const fornecedoresFiltrados = fornecedores.filter((fornecedor) => {
+    if (!termoBuscaFornecedor) return true
+
+    return (
+      fornecedor.nome.toLowerCase().includes(termoBuscaFornecedor) ||
+      fornecedor.cnpj.toLowerCase().includes(termoBuscaFornecedor) ||
+      fornecedor.telefone.toLowerCase().includes(termoBuscaFornecedor) ||
+      fornecedor.email.toLowerCase().includes(termoBuscaFornecedor)
     )
   })
 
@@ -593,7 +720,7 @@ function App() {
 
               <button
                 type="button"
-                onClick={() => abrirPagina('fornecedores')}
+                onClick={abrirCadastroFornecedor}
               >
                 🚚 Novo fornecedor
               </button>
@@ -904,50 +1031,248 @@ function App() {
   }
 
   function renderFornecedores() {
+    const editando = Boolean(fornecedorEmEdicao)
+
     return (
       <>
         <section className="welcome">
           <div>
-            <p className="eyebrow">
-              COMPRAS E ABASTECIMENTO
-            </p>
-
-            <h3>
-              Fornecedores
-            </h3>
-
+            <p className="eyebrow">COMPRAS E ABASTECIMENTO</p>
+            <h3>Fornecedores</h3>
             <p className="welcome-text">
-              Organize seus fornecedores e prepare
-              o sistema para pedidos e entrada de mercadorias.
+              Organize seus fornecedores e prepare o sistema para pedidos,
+              compras e entrada de mercadorias.
             </p>
           </div>
 
           <button
             type="button"
             className="primary-button"
+            onClick={abrirCadastroFornecedor}
           >
             + Novo fornecedor
           </button>
         </section>
 
-        <article className="panel">
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">
-                CADASTRO
-              </p>
-
-              <h3>
-                Lista de fornecedores
-              </h3>
+        <section className="cards supplier-cards">
+          <article className="card">
+            <div className="card-top">
+              <span>Total de fornecedores</span>
+              <span className="card-icon">🚚</span>
             </div>
+            <strong>{fornecedores.length}</strong>
+            <small>Fornecedores cadastrados</small>
+          </article>
+
+          <article className="card">
+            <div className="card-top">
+              <span>Com CNPJ</span>
+              <span className="card-icon">🏢</span>
+            </div>
+            <strong>{fornecedores.filter((item) => item.cnpj).length}</strong>
+            <small>Cadastros empresariais</small>
+          </article>
+
+          <article className="card">
+            <div className="card-top">
+              <span>Com telefone</span>
+              <span className="card-icon">☎️</span>
+            </div>
+            <strong>{fornecedores.filter((item) => item.telefone).length}</strong>
+            <small>Contatos disponíveis</small>
+          </article>
+
+          <article className="card">
+            <div className="card-top">
+              <span>Com e-mail</span>
+              <span className="card-icon">✉️</span>
+            </div>
+            <strong>{fornecedores.filter((item) => item.email).length}</strong>
+            <small>Contatos digitais</small>
+          </article>
+        </section>
+
+        {mostrarFormularioFornecedor && (
+          <article className="panel product-form-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">
+                  {editando ? 'EDIÇÃO DE CADASTRO' : 'NOVO CADASTRO'}
+                </p>
+                <h3>
+                  {editando ? 'Editar fornecedor' : 'Cadastrar fornecedor'}
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={fecharCadastroFornecedor}
+              >
+                Fechar
+              </button>
+            </div>
+
+            <form className="product-form" onSubmit={salvarFornecedor}>
+              <div className="form-group form-group-large">
+                <label htmlFor="fornecedorNome">Razão social / Nome *</label>
+                <input
+                  id="fornecedorNome"
+                  name="nome"
+                  type="text"
+                  placeholder="Ex.: Distribuidora Estação Ltda."
+                  value={novoFornecedor.nome}
+                  onChange={alterarCampoFornecedor}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="fornecedorCnpj">CNPJ</label>
+                <input
+                  id="fornecedorCnpj"
+                  name="cnpj"
+                  type="text"
+                  placeholder="00.000.000/0000-00"
+                  value={novoFornecedor.cnpj}
+                  onChange={alterarCampoFornecedor}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="fornecedorTelefone">Telefone</label>
+                <input
+                  id="fornecedorTelefone"
+                  name="telefone"
+                  type="text"
+                  placeholder="(11) 99999-9999"
+                  value={novoFornecedor.telefone}
+                  onChange={alterarCampoFornecedor}
+                />
+              </div>
+
+              <div className="form-group form-group-large">
+                <label htmlFor="fornecedorEmail">E-mail</label>
+                <input
+                  id="fornecedorEmail"
+                  name="email"
+                  type="email"
+                  placeholder="contato@fornecedor.com.br"
+                  value={novoFornecedor.email}
+                  onChange={alterarCampoFornecedor}
+                />
+              </div>
+
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={fecharCadastroFornecedor}
+                >
+                  Cancelar
+                </button>
+
+                <button type="submit" className="primary-button">
+                  {editando ? 'Salvar alterações' : 'Salvar fornecedor'}
+                </button>
+              </div>
+            </form>
+          </article>
+        )}
+
+        <article className="panel">
+          <div className="panel-header product-list-header">
+            <div>
+              <p className="eyebrow">CADASTRO</p>
+              <h3>Lista de fornecedores</h3>
+            </div>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={abrirCadastroFornecedor}
+            >
+              + Cadastrar
+            </button>
           </div>
 
-          <div className="empty-chart">
-            <p>
-              Nenhum fornecedor cadastrado ainda.
-            </p>
+          <div className="product-toolbar">
+            <div className="search-box">
+              <span aria-hidden="true">⌕</span>
+              <input
+                type="search"
+                placeholder="Buscar por nome, CNPJ, telefone ou e-mail..."
+                value={buscaFornecedor}
+                onChange={(evento) => setBuscaFornecedor(evento.target.value)}
+              />
+              {buscaFornecedor && (
+                <button
+                  type="button"
+                  className="clear-search-button"
+                  onClick={() => setBuscaFornecedor('')}
+                  title="Limpar busca"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            <span className="product-count">
+              {fornecedoresFiltrados.length} de {fornecedores.length}{' '}
+              fornecedor(es)
+            </span>
           </div>
+
+          {fornecedores.length === 0 ? (
+            <div className="empty-chart">
+              <p>Nenhum fornecedor cadastrado ainda.</p>
+            </div>
+          ) : fornecedoresFiltrados.length === 0 ? (
+            <div className="empty-chart">
+              <p>Nenhum fornecedor encontrado para esta busca.</p>
+            </div>
+          ) : (
+            <div className="products-table-wrapper">
+              <table className="products-table suppliers-table">
+                <thead>
+                  <tr>
+                    <th>Fornecedor</th>
+                    <th>CNPJ</th>
+                    <th>Telefone</th>
+                    <th>E-mail</th>
+                    <th className="actions-column">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fornecedoresFiltrados.map((fornecedor) => (
+                    <tr key={fornecedor.id}>
+                      <td><strong>{fornecedor.nome}</strong></td>
+                      <td>{fornecedor.cnpj || '-'}</td>
+                      <td>{fornecedor.telefone || '-'}</td>
+                      <td>{fornecedor.email || '-'}</td>
+                      <td className="product-actions">
+                        <button
+                          type="button"
+                          className="table-action-button"
+                          onClick={() => editarFornecedor(fornecedor)}
+                          title="Editar fornecedor"
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="table-action-button danger"
+                          onClick={() => excluirFornecedor(fornecedor)}
+                          title="Excluir fornecedor"
+                        >
+                          🗑️ Excluir
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </article>
       </>
     )
