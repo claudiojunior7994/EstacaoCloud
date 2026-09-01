@@ -69,6 +69,38 @@ function App() {
     }
   }, [fornecedores])
 
+
+  const clienteVazio = {
+    nome: '',
+    cpfCnpj: '',
+    telefone: '',
+    email: '',
+    nascimento: '',
+    clube: true,
+    ativo: true,
+  }
+
+  const [clientes, setClientes] = useState(() => {
+    try {
+      const clientesSalvos = localStorage.getItem('estacaocloud-clientes')
+      return clientesSalvos ? JSON.parse(clientesSalvos) : []
+    } catch {
+      return []
+    }
+  })
+  const [buscaCliente, setBuscaCliente] = useState('')
+  const [clienteEmEdicao, setClienteEmEdicao] = useState(null)
+  const [mostrarFormularioCliente, setMostrarFormularioCliente] = useState(false)
+  const [novoCliente, setNovoCliente] = useState(clienteVazio)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('estacaocloud-clientes', JSON.stringify(clientes))
+    } catch (erro) {
+      console.error('Erro ao salvar clientes:', erro)
+    }
+  }, [clientes])
+
   const paginas = {
     'visao-geral': {
       titulo: 'Visão geral',
@@ -110,6 +142,7 @@ function App() {
     setPagina(nomePagina)
     setMostrarFormularioProduto(false)
     setMostrarFormularioFornecedor(false)
+    setMostrarFormularioCliente(false)
   }
 
   function abrirCadastroProduto() {
@@ -287,6 +320,98 @@ function App() {
     }
   }
 
+  function abrirCadastroCliente() {
+    setPagina('clientes')
+    setClienteEmEdicao(null)
+    setNovoCliente(clienteVazio)
+    setMostrarFormularioCliente(true)
+  }
+
+  function fecharCadastroCliente() {
+    setMostrarFormularioCliente(false)
+    setClienteEmEdicao(null)
+    setNovoCliente(clienteVazio)
+  }
+
+  function alterarCampoCliente(evento) {
+    const { name, value, type, checked } = evento.target
+
+    setNovoCliente((clienteAtual) => ({
+      ...clienteAtual,
+      [name]: type === 'checkbox' ? checked : value,
+    }))
+  }
+
+  function salvarCliente(evento) {
+    evento.preventDefault()
+
+    if (!novoCliente.nome.trim()) {
+      alert('Preencha pelo menos o nome do cliente.')
+      return
+    }
+
+    const dadosCliente = {
+      nome: novoCliente.nome.trim(),
+      cpfCnpj: novoCliente.cpfCnpj.trim(),
+      telefone: novoCliente.telefone.trim(),
+      email: novoCliente.email.trim(),
+      nascimento: novoCliente.nascimento,
+      clube: Boolean(novoCliente.clube),
+      ativo: Boolean(novoCliente.ativo),
+    }
+
+    if (clienteEmEdicao) {
+      setClientes((listaAtual) =>
+        listaAtual.map((cliente) =>
+          cliente.id === clienteEmEdicao.id
+            ? { ...cliente, ...dadosCliente }
+            : cliente,
+        ),
+      )
+    } else {
+      setClientes((listaAtual) => [
+        ...listaAtual,
+        {
+          id: Date.now(),
+          criadoEm: new Date().toISOString(),
+          ...dadosCliente,
+        },
+      ])
+    }
+
+    fecharCadastroCliente()
+  }
+
+  function editarCliente(cliente) {
+    setClienteEmEdicao(cliente)
+    setNovoCliente({
+      nome: cliente.nome || '',
+      cpfCnpj: cliente.cpfCnpj || '',
+      telefone: cliente.telefone || '',
+      email: cliente.email || '',
+      nascimento: cliente.nascimento || '',
+      clube: Boolean(cliente.clube),
+      ativo: cliente.ativo !== false,
+    })
+    setMostrarFormularioCliente(true)
+  }
+
+  function excluirCliente(cliente) {
+    const confirmou = window.confirm(
+      `Deseja realmente excluir o cliente "${cliente.nome}"?`,
+    )
+
+    if (!confirmou) return
+
+    setClientes((listaAtual) =>
+      listaAtual.filter((item) => item.id !== cliente.id),
+    )
+
+    if (clienteEmEdicao?.id === cliente.id) {
+      fecharCadastroCliente()
+    }
+  }
+
   function formatarMoeda(valor) {
     return Number(valor || 0).toLocaleString('pt-BR', {
       style: 'currency',
@@ -334,6 +459,24 @@ function App() {
       fornecedor.email.toLowerCase().includes(termoBuscaFornecedor)
     )
   })
+
+  const termoBuscaCliente = buscaCliente.trim().toLowerCase()
+
+  const clientesFiltrados = clientes.filter((cliente) => {
+    if (!termoBuscaCliente) return true
+
+    return (
+      cliente.nome.toLowerCase().includes(termoBuscaCliente) ||
+      cliente.cpfCnpj.toLowerCase().includes(termoBuscaCliente) ||
+      cliente.telefone.toLowerCase().includes(termoBuscaCliente) ||
+      cliente.email.toLowerCase().includes(termoBuscaCliente)
+    )
+  })
+
+  const clientesClube = clientes.filter((cliente) => cliente.clube).length
+  const clientesAtivos = clientes.filter(
+    (cliente) => cliente.ativo !== false,
+  ).length
 
   function renderFormularioProduto() {
     const editando = Boolean(produtoEmEdicao)
@@ -636,10 +779,12 @@ function App() {
               <span className="card-icon">👥</span>
             </div>
 
-            <strong>0</strong>
+            <strong>{clientes.length}</strong>
 
             <small>
-              Nenhum cliente cadastrado
+              {clientes.length === 0
+                ? 'Nenhum cliente cadastrado'
+                : 'Clientes cadastrados no sistema'}
             </small>
           </article>
         </section>
@@ -713,7 +858,7 @@ function App() {
 
               <button
                 type="button"
-                onClick={() => abrirPagina('clientes')}
+                onClick={abrirCadastroCliente}
               >
                 👤 Cadastrar cliente
               </button>
@@ -981,50 +1126,292 @@ function App() {
   }
 
   function renderClientes() {
+    const editando = Boolean(clienteEmEdicao)
+
     return (
       <>
         <section className="welcome">
           <div>
-            <p className="eyebrow">
-              RELACIONAMENTO
-            </p>
-
-            <h3>
-              Clientes
-            </h3>
-
+            <p className="eyebrow">RELACIONAMENTO E FIDELIZAÇÃO</p>
+            <h3>Clientes</h3>
             <p className="welcome-text">
-              Mantenha os dados dos clientes organizados
-              e acompanhe o histórico de compras.
+              Cadastre clientes, identifique participantes do clube e prepare
+              o sistema para promoções personalizadas no PDV.
             </p>
           </div>
 
           <button
             type="button"
             className="primary-button"
+            onClick={abrirCadastroCliente}
           >
             + Novo cliente
           </button>
         </section>
 
-        <article className="panel">
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">
-                CADASTRO
-              </p>
-
-              <h3>
-                Lista de clientes
-              </h3>
+        <section className="cards">
+          <article className="card">
+            <div className="card-top">
+              <span>Total de clientes</span>
+              <span className="card-icon">👥</span>
             </div>
+            <strong>{clientes.length}</strong>
+            <small>Clientes cadastrados</small>
+          </article>
+
+          <article className="card">
+            <div className="card-top">
+              <span>Clube Estação</span>
+              <span className="card-icon">⭐</span>
+            </div>
+            <strong>{clientesClube}</strong>
+            <small>Participantes do clube</small>
+          </article>
+
+          <article className="card">
+            <div className="card-top">
+              <span>Clientes ativos</span>
+              <span className="card-icon">✅</span>
+            </div>
+            <strong>{clientesAtivos}</strong>
+            <small>Cadastros ativos</small>
+          </article>
+
+          <article className="card">
+            <div className="card-top">
+              <span>Com documento</span>
+              <span className="card-icon">🪪</span>
+            </div>
+            <strong>{clientes.filter((item) => item.cpfCnpj).length}</strong>
+            <small>CPF/CNPJ informado</small>
+          </article>
+        </section>
+
+        {mostrarFormularioCliente && (
+          <article className="panel product-form-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">
+                  {editando ? 'EDIÇÃO DE CADASTRO' : 'NOVO CADASTRO'}
+                </p>
+                <h3>{editando ? 'Editar cliente' : 'Cadastrar cliente'}</h3>
+              </div>
+
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={fecharCadastroCliente}
+              >
+                Fechar
+              </button>
+            </div>
+
+            <form className="product-form" onSubmit={salvarCliente}>
+              <div className="form-group form-group-large">
+                <label htmlFor="clienteNome">Nome completo *</label>
+                <input
+                  id="clienteNome"
+                  name="nome"
+                  type="text"
+                  placeholder="Ex.: João da Silva"
+                  value={novoCliente.nome}
+                  onChange={alterarCampoCliente}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="clienteCpfCnpj">CPF/CNPJ</label>
+                <input
+                  id="clienteCpfCnpj"
+                  name="cpfCnpj"
+                  type="text"
+                  placeholder="000.000.000-00"
+                  value={novoCliente.cpfCnpj}
+                  onChange={alterarCampoCliente}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="clienteTelefone">Telefone</label>
+                <input
+                  id="clienteTelefone"
+                  name="telefone"
+                  type="text"
+                  placeholder="(11) 99999-9999"
+                  value={novoCliente.telefone}
+                  onChange={alterarCampoCliente}
+                />
+              </div>
+
+              <div className="form-group form-group-large">
+                <label htmlFor="clienteEmail">E-mail</label>
+                <input
+                  id="clienteEmail"
+                  name="email"
+                  type="email"
+                  placeholder="cliente@email.com"
+                  value={novoCliente.email}
+                  onChange={alterarCampoCliente}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="clienteNascimento">Data de nascimento</label>
+                <input
+                  id="clienteNascimento"
+                  name="nascimento"
+                  type="date"
+                  value={novoCliente.nascimento}
+                  onChange={alterarCampoCliente}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Status do cadastro</label>
+                <label className="checkbox-option">
+                  <input
+                    name="ativo"
+                    type="checkbox"
+                    checked={novoCliente.ativo}
+                    onChange={alterarCampoCliente}
+                  />
+                  Cliente ativo
+                </label>
+              </div>
+
+              <div className="form-group">
+                <label>Fidelização</label>
+                <label className="checkbox-option">
+                  <input
+                    name="clube"
+                    type="checkbox"
+                    checked={novoCliente.clube}
+                    onChange={alterarCampoCliente}
+                  />
+                  Participa do Clube Estação
+                </label>
+              </div>
+
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={fecharCadastroCliente}
+                >
+                  Cancelar
+                </button>
+
+                <button type="submit" className="primary-button">
+                  {editando ? 'Salvar alterações' : 'Salvar cliente'}
+                </button>
+              </div>
+            </form>
+          </article>
+        )}
+
+        <article className="panel">
+          <div className="panel-header product-list-header">
+            <div>
+              <p className="eyebrow">CADASTRO</p>
+              <h3>Lista de clientes</h3>
+            </div>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={abrirCadastroCliente}
+            >
+              + Cadastrar
+            </button>
           </div>
 
-          <div className="empty-chart">
-            <p>
-              Nenhum cliente cadastrado ainda.
-            </p>
+          <div className="product-toolbar">
+            <div className="search-box">
+              <span aria-hidden="true">⌕</span>
+              <input
+                type="search"
+                placeholder="Buscar por nome, CPF/CNPJ, telefone ou e-mail..."
+                value={buscaCliente}
+                onChange={(evento) => setBuscaCliente(evento.target.value)}
+              />
+              {buscaCliente && (
+                <button
+                  type="button"
+                  className="clear-search-button"
+                  onClick={() => setBuscaCliente('')}
+                  title="Limpar busca"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            <span className="product-count">
+              {clientesFiltrados.length} de {clientes.length} cliente(s)
+            </span>
           </div>
+
+          {clientes.length === 0 ? (
+            <div className="empty-chart">
+              <p>Nenhum cliente cadastrado ainda.</p>
+            </div>
+          ) : clientesFiltrados.length === 0 ? (
+            <div className="empty-chart">
+              <p>Nenhum cliente encontrado para esta busca.</p>
+            </div>
+          ) : (
+            <div className="products-table-wrapper">
+              <table className="products-table customers-table">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>CPF/CNPJ</th>
+                    <th>Telefone</th>
+                    <th>Clube</th>
+                    <th>Status</th>
+                    <th className="actions-column">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clientesFiltrados.map((cliente) => (
+                    <tr key={cliente.id}>
+                      <td><strong>{cliente.nome}</strong></td>
+                      <td>{cliente.cpfCnpj || '-'}</td>
+                      <td>{cliente.telefone || '-'}</td>
+                      <td>
+                        <span className={`product-status ${cliente.clube ? 'status-normal' : ''}`}>
+                          {cliente.clube ? 'Membro' : 'Não'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`product-status ${cliente.ativo !== false ? 'status-normal' : 'status-danger'}`}>
+                          {cliente.ativo !== false ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </td>
+                      <td className="product-actions">
+                        <button
+                          type="button"
+                          className="table-action-button"
+                          onClick={() => editarCliente(cliente)}
+                          title="Editar cliente"
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="table-action-button danger"
+                          onClick={() => excluirCliente(cliente)}
+                          title="Excluir cliente"
+                        >
+                          🗑️ Excluir
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </article>
       </>
     )
