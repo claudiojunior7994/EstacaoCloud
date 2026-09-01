@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 
 function App() {
@@ -6,9 +6,18 @@ function App() {
   const [mostrarFormularioProduto, setMostrarFormularioProduto] =
     useState(false)
 
-  const [produtos, setProdutos] = useState([])
+  const [produtos, setProdutos] = useState(() => {
+    try {
+      const produtosSalvos = localStorage.getItem('estacaocloud-produtos')
+      return produtosSalvos ? JSON.parse(produtosSalvos) : []
+    } catch {
+      return []
+    }
+  })
+  const [buscaProduto, setBuscaProduto] = useState('')
+  const [produtoEmEdicao, setProdutoEmEdicao] = useState(null)
 
-  const [novoProduto, setNovoProduto] = useState({
+  const produtoVazio = {
     codigoBarras: '',
     nome: '',
     categoria: '',
@@ -16,7 +25,17 @@ function App() {
     precoVenda: '',
     estoque: '',
     estoqueMinimo: '',
-  })
+  }
+
+  const [novoProduto, setNovoProduto] = useState(produtoVazio)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('estacaocloud-produtos', JSON.stringify(produtos))
+    } catch (erro) {
+      console.error('Erro ao salvar produtos:', erro)
+    }
+  }, [produtos])
 
   const paginas = {
     'visao-geral': {
@@ -62,11 +81,15 @@ function App() {
 
   function abrirCadastroProduto() {
     setPagina('produtos')
+    setProdutoEmEdicao(null)
+    setNovoProduto(produtoVazio)
     setMostrarFormularioProduto(true)
   }
 
   function fecharCadastroProduto() {
     setMostrarFormularioProduto(false)
+    setProdutoEmEdicao(null)
+    setNovoProduto(produtoVazio)
   }
 
   function alterarCampoProduto(evento) {
@@ -78,7 +101,7 @@ function App() {
     }))
   }
 
-  function cadastrarProduto(evento) {
+  function salvarProduto(evento) {
     evento.preventDefault()
 
     if (
@@ -90,37 +113,64 @@ function App() {
       return
     }
 
-    const produto = {
-      id: Date.now(),
-
+    const dadosProduto = {
       codigoBarras: novoProduto.codigoBarras.trim(),
-
       nome: novoProduto.nome.trim(),
-
       categoria: novoProduto.categoria.trim(),
-
       precoCusto: Number(novoProduto.precoCusto || 0),
-
       precoVenda: Number(novoProduto.precoVenda || 0),
-
       estoque: Number(novoProduto.estoque || 0),
-
       estoqueMinimo: Number(novoProduto.estoqueMinimo || 0),
     }
 
-    setProdutos((listaAtual) => [...listaAtual, produto])
+    if (produtoEmEdicao) {
+      setProdutos((listaAtual) =>
+        listaAtual.map((produto) =>
+          produto.id === produtoEmEdicao.id
+            ? { ...produto, ...dadosProduto }
+            : produto,
+        ),
+      )
+    } else {
+      setProdutos((listaAtual) => [
+        ...listaAtual,
+        { id: Date.now(), ...dadosProduto },
+      ])
+    }
 
-    setNovoProduto({
-      codigoBarras: '',
-      nome: '',
-      categoria: '',
-      precoCusto: '',
-      precoVenda: '',
-      estoque: '',
-      estoqueMinimo: '',
-    })
-
+    setNovoProduto(produtoVazio)
+    setProdutoEmEdicao(null)
     setMostrarFormularioProduto(false)
+  }
+
+  function editarProduto(produto) {
+    setProdutoEmEdicao(produto)
+    setNovoProduto({
+      codigoBarras: produto.codigoBarras || '',
+      nome: produto.nome || '',
+      categoria: produto.categoria || '',
+      precoCusto: String(produto.precoCusto ?? ''),
+      precoVenda: String(produto.precoVenda ?? ''),
+      estoque: String(produto.estoque ?? ''),
+      estoqueMinimo: String(produto.estoqueMinimo ?? ''),
+    })
+    setMostrarFormularioProduto(true)
+  }
+
+  function excluirProduto(produto) {
+    const confirmou = window.confirm(
+      `Deseja realmente excluir o produto "${produto.nome}"?`,
+    )
+
+    if (!confirmou) return
+
+    setProdutos((listaAtual) =>
+      listaAtual.filter((item) => item.id !== produto.id),
+    )
+
+    if (produtoEmEdicao?.id === produto.id) {
+      fecharCadastroProduto()
+    }
   }
 
   function formatarMoeda(valor) {
@@ -146,14 +196,29 @@ function App() {
     0,
   )
 
+  const termoBuscaProduto = buscaProduto.trim().toLowerCase()
+
+  const produtosFiltrados = produtos.filter((produto) => {
+    if (!termoBuscaProduto) return true
+
+    return (
+      produto.nome.toLowerCase().includes(termoBuscaProduto) ||
+      produto.codigoBarras.toLowerCase().includes(termoBuscaProduto) ||
+      produto.categoria.toLowerCase().includes(termoBuscaProduto)
+    )
+  })
+
   function renderFormularioProduto() {
+    const editando = Boolean(produtoEmEdicao)
+
     return (
       <article className="panel product-form-panel">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">NOVO CADASTRO</p>
-
-            <h3>Cadastrar produto</h3>
+            <p className="eyebrow">
+              {editando ? 'EDIÇÃO DE CADASTRO' : 'NOVO CADASTRO'}
+            </p>
+            <h3>{editando ? 'Editar produto' : 'Cadastrar produto'}</h3>
           </div>
 
           <button
@@ -165,12 +230,9 @@ function App() {
           </button>
         </div>
 
-        <form className="product-form" onSubmit={cadastrarProduto}>
+        <form className="product-form" onSubmit={salvarProduto}>
           <div className="form-group">
-            <label htmlFor="codigoBarras">
-              Código de barras
-            </label>
-
+            <label htmlFor="codigoBarras">Código de barras</label>
             <input
               id="codigoBarras"
               name="codigoBarras"
@@ -182,10 +244,7 @@ function App() {
           </div>
 
           <div className="form-group form-group-large">
-            <label htmlFor="nome">
-              Nome do produto *
-            </label>
-
+            <label htmlFor="nome">Nome do produto *</label>
             <input
               id="nome"
               name="nome"
@@ -197,10 +256,7 @@ function App() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="categoria">
-              Categoria
-            </label>
-
+            <label htmlFor="categoria">Categoria</label>
             <input
               id="categoria"
               name="categoria"
@@ -212,10 +268,7 @@ function App() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="precoCusto">
-              Preço de custo
-            </label>
-
+            <label htmlFor="precoCusto">Preço de custo</label>
             <input
               id="precoCusto"
               name="precoCusto"
@@ -229,10 +282,7 @@ function App() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="precoVenda">
-              Preço de venda *
-            </label>
-
+            <label htmlFor="precoVenda">Preço de venda *</label>
             <input
               id="precoVenda"
               name="precoVenda"
@@ -246,10 +296,7 @@ function App() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="estoque">
-              Estoque atual *
-            </label>
-
+            <label htmlFor="estoque">Estoque atual *</label>
             <input
               id="estoque"
               name="estoque"
@@ -263,10 +310,7 @@ function App() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="estoqueMinimo">
-              Estoque mínimo
-            </label>
-
+            <label htmlFor="estoqueMinimo">Estoque mínimo</label>
             <input
               id="estoqueMinimo"
               name="estoqueMinimo"
@@ -288,11 +332,8 @@ function App() {
               Cancelar
             </button>
 
-            <button
-              type="submit"
-              className="primary-button"
-            >
-              Salvar produto
+            <button type="submit" className="primary-button">
+              {editando ? 'Salvar alterações' : 'Salvar produto'}
             </button>
           </div>
         </form>
@@ -309,6 +350,14 @@ function App() {
       )
     }
 
+    if (produtosFiltrados.length === 0) {
+      return (
+        <div className="empty-chart">
+          <p>Nenhum produto encontrado para esta busca.</p>
+        </div>
+      )
+    }
+
     return (
       <div className="products-table-wrapper">
         <table className="products-table">
@@ -320,20 +369,18 @@ function App() {
               <th>Venda</th>
               <th>Estoque</th>
               <th>Status</th>
+              <th className="actions-column">Ações</th>
             </tr>
           </thead>
 
           <tbody>
-            {produtos.map((produto) => {
-              const semEstoque =
-                produto.estoque <= 0
-
+            {produtosFiltrados.map((produto) => {
+              const semEstoque = produto.estoque <= 0
               const estoqueBaixo =
                 produto.estoque > 0 &&
                 produto.estoque <= produto.estoqueMinimo
 
               let status = 'Normal'
-
               let statusClasse = 'status-normal'
 
               if (semEstoque) {
@@ -346,34 +393,33 @@ function App() {
 
               return (
                 <tr key={produto.id}>
+                  <td><strong>{produto.nome}</strong></td>
+                  <td>{produto.codigoBarras || '-'}</td>
+                  <td>{produto.categoria || '-'}</td>
+                  <td>{formatarMoeda(produto.precoVenda)}</td>
+                  <td>{produto.estoque}</td>
                   <td>
-                    <strong>
-                      {produto.nome}
-                    </strong>
-                  </td>
-
-                  <td>
-                    {produto.codigoBarras || '-'}
-                  </td>
-
-                  <td>
-                    {produto.categoria || '-'}
-                  </td>
-
-                  <td>
-                    {formatarMoeda(produto.precoVenda)}
-                  </td>
-
-                  <td>
-                    {produto.estoque}
-                  </td>
-
-                  <td>
-                    <span
-                      className={`product-status ${statusClasse}`}
-                    >
+                    <span className={`product-status ${statusClasse}`}>
                       {status}
                     </span>
+                  </td>
+                  <td className="product-actions">
+                    <button
+                      type="button"
+                      className="table-action-button"
+                      onClick={() => editarProduto(produto)}
+                      title="Editar produto"
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="table-action-button danger"
+                      onClick={() => excluirProduto(produto)}
+                      title="Excluir produto"
+                    >
+                      🗑️ Excluir
+                    </button>
                   </td>
                 </tr>
               )
@@ -580,9 +626,7 @@ function App() {
           <button
             type="button"
             className="primary-button"
-            onClick={() =>
-              setMostrarFormularioProduto(true)
-            }
+            onClick={abrirCadastroProduto}
           >
             + Novo produto
           </button>
@@ -654,26 +698,45 @@ function App() {
           renderFormularioProduto()}
 
         <article className="panel">
-          <div className="panel-header">
+          <div className="panel-header product-list-header">
             <div>
-              <p className="eyebrow">
-                CADASTRO
-              </p>
-
-              <h3>
-                Lista de produtos
-              </h3>
+              <p className="eyebrow">CADASTRO</p>
+              <h3>Lista de produtos</h3>
             </div>
 
             <button
               type="button"
               className="secondary-button"
-              onClick={() =>
-                setMostrarFormularioProduto(true)
-              }
+              onClick={abrirCadastroProduto}
             >
               + Cadastrar
             </button>
+          </div>
+
+          <div className="product-toolbar">
+            <div className="search-box">
+              <span aria-hidden="true">⌕</span>
+              <input
+                type="search"
+                placeholder="Buscar por nome, código de barras ou categoria..."
+                value={buscaProduto}
+                onChange={(evento) => setBuscaProduto(evento.target.value)}
+              />
+              {buscaProduto && (
+                <button
+                  type="button"
+                  className="clear-search-button"
+                  onClick={() => setBuscaProduto('')}
+                  title="Limpar busca"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            <span className="product-count">
+              {produtosFiltrados.length} de {totalProdutos} produto(s)
+            </span>
           </div>
 
           {renderListaProdutos()}
