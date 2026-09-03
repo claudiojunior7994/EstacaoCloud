@@ -4,17 +4,20 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 
+const authRoutes = require('./routes/auth');
+const autenticar = require('./middleware/auth');
+const permitirPerfis = require('./middleware/permissao');
+const { testarConexao } = require('./database/db');
+
 const app = express();
 
 const PORT = Number(process.env.PORT) || 3000;
 const CORS_ORIGIN =
   process.env.CORS_ORIGIN || 'http://localhost:5173';
 
-// Segurança básica
 app.disable('x-powered-by');
 app.use(helmet());
 
-// CORS: permite somente o frontend autorizado
 app.use(
   cors({
     origin: CORS_ORIGIN,
@@ -23,10 +26,8 @@ app.use(
   })
 );
 
-// Limita o tamanho dos dados recebidos pela API
 app.use(express.json({ limit: '100kb' }));
 
-// Rota principal
 app.get('/', (req, res) => {
   res.json({
     sistema: 'EstacaoCloud',
@@ -34,7 +35,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// Rota para verificar a saúde da API
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -42,14 +42,33 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Rotas inexistentes
+app.use('/api/auth', authRoutes);
+
+app.get('/api/me', autenticar, (req, res) => {
+  res.status(200).json({
+    mensagem: 'Acesso autorizado.',
+    usuario: req.usuario,
+  });
+});
+
+app.get(
+  '/api/admin/teste',
+  autenticar,
+  permitirPerfis('admin'),
+  (req, res) => {
+    res.status(200).json({
+      mensagem: 'Acesso de administrador autorizado.',
+      usuario: req.usuario,
+    });
+  }
+);
+
 app.use((req, res) => {
   res.status(404).json({
     erro: 'Rota não encontrada.',
   });
 });
 
-// Tratamento de erros
 app.use((err, req, res, next) => {
   console.error('Erro interno:', err);
 
@@ -58,12 +77,20 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log('');
-  console.log('================================');
-  console.log(' EstacaoCloud API');
-  console.log(` Porta: ${PORT}`);
-  console.log(' Security: ativa');
-  console.log('================================');
-  console.log('');
-});
+async function iniciarServidor() {
+  await testarConexao();
+
+  app.listen(PORT, () => {
+    console.log('');
+    console.log('================================');
+    console.log(' EstacaoCloud API');
+    console.log(` Porta: ${PORT}`);
+    console.log(' Security: ativa');
+    console.log(' Auth: ativa');
+    console.log(' Permissoes: ativas');
+    console.log('================================');
+    console.log('');
+  });
+}
+
+iniciarServidor();

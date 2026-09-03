@@ -1,0 +1,29 @@
+CREATE TABLE IF NOT EXISTS empresas (
+  id SERIAL PRIMARY KEY,
+  nome VARCHAR(150) NOT NULL,
+  nome_fantasia VARCHAR(150),
+  cnpj VARCHAR(20) UNIQUE,
+  email VARCHAR(150),
+  telefone VARCHAR(30),
+  ativa BOOLEAN NOT NULL DEFAULT TRUE,
+  criada_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS usuarios (
+  id SERIAL PRIMARY KEY,
+  empresa_id INTEGER NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  nome VARCHAR(150) NOT NULL,
+  email VARCHAR(150) NOT NULL,
+  senha_hash VARCHAR(255) NOT NULL,
+  perfil VARCHAR(30) NOT NULL DEFAULT 'operador',
+  ativo BOOLEAN NOT NULL DEFAULT TRUE,
+  criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  atualizado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (empresa_id, email)
+);
+
+CREATE INDEX IF NOT EXISTS idx_usuarios_empresa_id
+ON usuarios (empresa_id);
+
+CREATE INDEX IF NOT EXISTS idx_usuarios_email
+ON usuarios (email);
