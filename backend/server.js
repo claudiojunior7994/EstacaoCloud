@@ -5,8 +5,12 @@ const cors = require('cors');
 const helmet = require('helmet');
 
 const authRoutes = require('./routes/auth');
+const empresasRoutes = require('./routes/empresas');
+const usuariosRoutes = require('./routes/usuarios');
+
 const autenticar = require('./middleware/auth');
 const permitirPerfis = require('./middleware/permissao');
+
 const { testarConexao } = require('./database/db');
 
 const app = express();
@@ -42,8 +46,16 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Autenticação
 app.use('/api/auth', authRoutes);
 
+// Empresa do usuário logado
+app.use('/api/empresas', empresasRoutes);
+
+// Usuários da empresa logada
+app.use('/api/usuarios', usuariosRoutes);
+
+// Rota protegida de teste
 app.get('/api/me', autenticar, (req, res) => {
   res.status(200).json({
     mensagem: 'Acesso autorizado.',
@@ -51,6 +63,7 @@ app.get('/api/me', autenticar, (req, res) => {
   });
 });
 
+// Rota exclusiva de administrador
 app.get(
   '/api/admin/teste',
   autenticar,
@@ -88,6 +101,7 @@ async function iniciarServidor() {
     console.log(' Security: ativa');
     console.log(' Auth: ativa');
     console.log(' Permissoes: ativas');
+    console.log(' Multiempresa: ativa');
     console.log('================================');
     console.log('');
   });
