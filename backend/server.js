@@ -10,6 +10,7 @@ const usuariosRoutes = require('./routes/usuarios')
 const produtosRoutes = require('./routes/produtos')
 const fornecedoresRoutes = require('./routes/fornecedores')
 const clientesRoutes = require('./routes/clientes')
+const vendasRoutes = require('./routes/vendas')
 
 const autenticar = require('./middleware/auth')
 const permitirPerfis = require('./middleware/permissao')
@@ -50,25 +51,14 @@ app.get('/api/health', (req, res) => {
   })
 })
 
-// Autenticação
 app.use('/api/auth', authRoutes)
-
-// Empresa do usuário logado
 app.use('/api/empresas', empresasRoutes)
-
-// Usuários da empresa logada
 app.use('/api/usuarios', usuariosRoutes)
-
-// Produtos da empresa logada
 app.use('/api/produtos', produtosRoutes)
-
-// Fornecedores da empresa logada
 app.use('/api/fornecedores', fornecedoresRoutes)
-
-// Clientes da empresa logada
 app.use('/api/clientes', clientesRoutes)
+app.use('/api/vendas', vendasRoutes)
 
-// Rota protegida de teste
 app.get('/api/me', autenticar, (req, res) => {
   res.status(200).json({
     mensagem: 'Acesso autorizado.',
@@ -76,7 +66,6 @@ app.get('/api/me', autenticar, (req, res) => {
   })
 })
 
-// Rota exclusiva de administrador
 app.get(
   '/api/admin/teste',
   autenticar,
@@ -118,6 +107,7 @@ async function iniciarServidor() {
     console.log(' Produtos API: ativa')
     console.log(' Fornecedores API: ativa')
     console.log(' Clientes API: ativa')
+    console.log(' Vendas API: ativa')
     console.log('================================')
     console.log('')
   })

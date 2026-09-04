@@ -3,14 +3,12 @@ const express = require('express')
 const autenticar = require('../middleware/auth')
 const permitirPerfis = require('../middleware/permissao')
 
+const {
+  produtos,
+  gerarIdProduto,
+} = require('../data/produtosStore')
+
 const router = express.Router()
-
-// Armazenamento temporário em memória.
-// Será substituído pelo PostgreSQL.
-// Os dados somem quando o backend reiniciar.
-const produtos = []
-
-let proximoId = 1
 
 function normalizarTexto(valor) {
   return String(valor || '').trim()
@@ -81,6 +79,7 @@ router.post(
       preco,
       custo,
       estoque,
+      estoqueMinimo,
       fornecedor,
       categoria,
     } = req.body
@@ -92,6 +91,8 @@ router.post(
     const precoNormalizado = normalizarNumero(preco)
     const custoNormalizado = normalizarNumero(custo)
     const estoqueNormalizado = normalizarNumero(estoque)
+    const estoqueMinimoNormalizado =
+      normalizarNumero(estoqueMinimo ?? 0)
 
     if (!nomeNormalizado) {
       return res.status(400).json({
@@ -132,6 +133,15 @@ router.post(
       })
     }
 
+    if (
+      estoqueMinimoNormalizado === null ||
+      estoqueMinimoNormalizado < 0
+    ) {
+      return res.status(400).json({
+        erro: 'Estoque mínimo inválido.',
+      })
+    }
+
     const codigoJaExiste = produtos.some(
       (produto) =>
         produto.empresaId ===
@@ -149,13 +159,14 @@ router.post(
     const agora = new Date().toISOString()
 
     const produto = {
-      id: proximoId++,
+      id: gerarIdProduto(),
       empresaId: req.usuario.empresaId,
       nome: nomeNormalizado,
       codigoBarras: codigoBarrasNormalizado,
       preco: precoNormalizado,
       custo: custoNormalizado,
       estoque: estoqueNormalizado,
+      estoqueMinimo: estoqueMinimoNormalizado,
       fornecedor: normalizarTexto(fornecedor),
       categoria: normalizarTexto(categoria),
       ativo: true,
@@ -198,6 +209,7 @@ router.patch(
       preco,
       custo,
       estoque,
+      estoqueMinimo,
       fornecedor,
       categoria,
       ativo,
@@ -275,6 +287,18 @@ router.patch(
       }
 
       produto.estoque = valor
+    }
+
+    if (estoqueMinimo !== undefined) {
+      const valor = normalizarNumero(estoqueMinimo)
+
+      if (valor === null || valor < 0) {
+        return res.status(400).json({
+          erro: 'Estoque mínimo inválido.',
+        })
+      }
+
+      produto.estoqueMinimo = valor
     }
 
     if (fornecedor !== undefined) {

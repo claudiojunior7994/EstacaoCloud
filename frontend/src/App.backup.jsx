@@ -2193,149 +2193,7 @@ function App() {
     )
   }
 
-  function exportarRelatorioExcel() {
-    const vendasValidas = vendas.filter(
-      (venda) => venda.status !== 'cancelada',
-    )
-
-    const linhas = [
-      ['RELATÓRIO ESTAÇÃOCLOUD'],
-      [],
-      ['RESUMO'],
-      ['Vendas concluídas', vendasValidas.length],
-      [
-        'Faturamento',
-        vendasValidas
-          .reduce(
-            (total, venda) => total + Number(venda.total || 0),
-            0,
-          )
-          .toFixed(2),
-      ],
-      [
-        'Descontos',
-        vendasValidas
-          .reduce(
-            (total, venda) =>
-              total + Number(venda.desconto || 0),
-            0,
-          )
-          .toFixed(2),
-      ],
-      [],
-      ['VENDAS'],
-      [
-        'ID',
-        'Data',
-        'Pagamento',
-        'Itens',
-        'Desconto',
-        'Total',
-        'Status',
-      ],
-      ...vendasValidas.map((venda) => [
-        `#${venda.id}`,
-        new Date(venda.criadaEm).toLocaleString('pt-BR'),
-        venda.formaPagamento || '-',
-        (venda.itens || []).reduce(
-          (soma, item) =>
-            soma + Number(item.quantidade || 0),
-          0,
-        ),
-        Number(venda.desconto || 0).toFixed(2),
-        Number(venda.total || 0).toFixed(2),
-        'Concluída',
-      ]),
-      [],
-      ['ESTOQUE'],
-      [
-        'Produto',
-        'Código de barras',
-        'Categoria',
-        'Estoque',
-        'Estoque mínimo',
-        'Custo',
-        'Valor em estoque',
-      ],
-      ...produtos.map((produto) => [
-        produto.nome || '-',
-        `="${String(produto.codigoBarras || '')}"`,
-        produto.categoria || '-',
-        Number(produto.estoque || 0),
-        Number(produto.estoqueMinimo || 0),
-        Number(produto.precoCusto || 0).toFixed(2),
-        (
-          Number(produto.precoCusto || 0) *
-          Number(produto.estoque || 0)
-        ).toFixed(2),
-      ]),
-    ]
-
-    const escaparCSV = (valor) => {
-      const texto = String(valor ?? '')
-      return `"${texto.replace(/"/g, '""')}"`
-    }
-
-    const csv = linhas
-      .map((linha) =>
-        linha.map(escaparCSV).join(';'),
-      )
-      .join('\r\n')
-
-    const blob = new Blob(['\uFEFF' + csv], {
-      type: 'text/csv;charset=utf-8;',
-    })
-
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-
-    link.href = url
-    link.download = `relatorio-estacaocloud-${new Date()
-      .toISOString()
-      .slice(0, 10)}.csv`
-
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
   function renderRelatorios() {
-    const vendasValidas = vendas.filter(
-      (venda) => venda.status !== 'cancelada',
-    )
-
-    const vendasCanceladas = vendas.filter(
-      (venda) => venda.status === 'cancelada',
-    ).length
-
-    const faturamentoTotal = vendasValidas.reduce(
-      (total, venda) => total + Number(venda.total || 0),
-      0,
-    )
-
-    const descontosTotal = vendasValidas.reduce(
-      (total, venda) =>
-        total + Number(venda.desconto || 0),
-      0,
-    )
-
-    const itensVendidos = vendasValidas.reduce(
-      (total, venda) =>
-        total +
-        (venda.itens || []).reduce(
-          (soma, item) =>
-            soma + Number(item.quantidade || 0),
-          0,
-        ),
-      0,
-    )
-
-    const ticketMedio =
-      vendasValidas.length > 0
-        ? faturamentoTotal / vendasValidas.length
-        : 0
-
     return (
       <>
         <section className="welcome">
@@ -2349,237 +2207,60 @@ function App() {
             </h3>
 
             <p className="welcome-text">
-              Consulte os indicadores diretamente no sistema
-              e exporte para Excel somente quando precisar.
+              Acompanhe vendas, estoque e desempenho
+              da operação através de indicadores.
             </p>
           </div>
 
           <button
             type="button"
             className="primary-button"
-            onClick={exportarRelatorioExcel}
           >
-            📊 Exportar para Excel
+            Gerar relatório
           </button>
-        </section>
-
-        <section className="cards">
-          <article className="card">
-            <div className="card-top">
-              <span>Faturamento</span>
-              <span className="card-icon">💰</span>
-            </div>
-            <strong>{formatarMoeda(faturamentoTotal)}</strong>
-            <small>Total de vendas concluídas</small>
-          </article>
-
-          <article className="card">
-            <div className="card-top">
-              <span>Vendas</span>
-              <span className="card-icon">🛒</span>
-            </div>
-            <strong>{vendasValidas.length}</strong>
-            <small>{vendasCanceladas} cancelada(s)</small>
-          </article>
-
-          <article className="card">
-            <div className="card-top">
-              <span>Ticket médio</span>
-              <span className="card-icon">🧾</span>
-            </div>
-            <strong>{formatarMoeda(ticketMedio)}</strong>
-            <small>Média por venda</small>
-          </article>
-
-          <article className="card">
-            <div className="card-top">
-              <span>Descontos</span>
-              <span className="card-icon">🏷️</span>
-            </div>
-            <strong>{formatarMoeda(descontosTotal)}</strong>
-            <small>Descontos concedidos</small>
-          </article>
         </section>
 
         <section className="dashboard-grid">
           <article className="panel">
             <div className="panel-header">
               <div>
-                <p className="eyebrow">VENDAS</p>
-                <h3>Resumo operacional</h3>
+                <p className="eyebrow">
+                  VENDAS
+                </p>
+
+                <h3>
+                  Desempenho
+                </h3>
               </div>
             </div>
 
-            <div className="quick-actions">
-              <button type="button">
-                🛒 {vendasValidas.length} venda(s) concluída(s)
-              </button>
-              <button type="button">
-                📦 {itensVendidos} item(ns) vendido(s)
-              </button>
-              <button type="button">
-                🧾 {formatarMoeda(ticketMedio)} de ticket médio
-              </button>
-              <button type="button">
-                💰 {formatarMoeda(faturamentoTotal)} faturados
-              </button>
+            <div className="empty-chart">
+              <p>
+                Os dados de vendas aparecerão aqui.
+              </p>
             </div>
           </article>
 
           <article className="panel">
             <div className="panel-header">
               <div>
-                <p className="eyebrow">ESTOQUE</p>
-                <h3>Posição atual</h3>
+                <p className="eyebrow">
+                  ESTOQUE
+                </p>
+
+                <h3>
+                  Movimentação
+                </h3>
               </div>
             </div>
 
-            <div className="quick-actions">
-              <button type="button">
-                📦 {totalProdutos} produto(s) cadastrado(s)
-              </button>
-              <button type="button">
-                ⚠️ {produtosEstoqueBaixo} com estoque baixo
-              </button>
-              <button type="button">
-                🚫 {produtosSemEstoque} sem estoque
-              </button>
-              <button type="button">
-                💰 {formatarMoeda(valorEstoque)} em estoque
-              </button>
+            <div className="empty-chart">
+              <p>
+                Os dados de estoque aparecerão aqui.
+              </p>
             </div>
           </article>
         </section>
-
-        <article className="panel">
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">MOVIMENTO</p>
-              <h3>Vendas registradas</h3>
-            </div>
-          </div>
-
-          {vendas.length === 0 ? (
-            <div className="empty-chart">
-              <p>Nenhuma venda registrada ainda.</p>
-            </div>
-          ) : (
-            <div className="products-table-wrapper">
-              <table className="products-table">
-                <thead>
-                  <tr>
-                    <th>Venda</th>
-                    <th>Data</th>
-                    <th>Pagamento</th>
-                    <th>Itens</th>
-                    <th>Desconto</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {vendas.map((venda) => (
-                    <tr key={venda.id}>
-                      <td>
-                        <strong>#{venda.id}</strong>
-                      </td>
-
-                      <td>
-                        {new Date(venda.criadaEm).toLocaleString('pt-BR')}
-                      </td>
-
-                      <td>{venda.formaPagamento || '-'}</td>
-
-                      <td>
-                        {(venda.itens || []).reduce(
-                          (soma, item) =>
-                            soma + Number(item.quantidade || 0),
-                          0,
-                        )}
-                      </td>
-
-                      <td>
-                        {formatarMoeda(venda.desconto)}
-                      </td>
-
-                      <td>
-                        {formatarMoeda(venda.total)}
-                      </td>
-
-                      <td>
-                        <span
-                          className={`product-status ${
-                            venda.status === 'cancelada'
-                              ? 'status-danger'
-                              : 'status-normal'
-                          }`}
-                        >
-                          {venda.status === 'cancelada'
-                            ? 'Cancelada'
-                            : 'Concluída'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </article>
-
-        <article className="panel">
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">ESTOQUE</p>
-              <h3>Posição dos produtos</h3>
-            </div>
-          </div>
-
-          {produtos.length === 0 ? (
-            <div className="empty-chart">
-              <p>Nenhum produto cadastrado.</p>
-            </div>
-          ) : (
-            <div className="products-table-wrapper">
-              <table className="products-table">
-                <thead>
-                  <tr>
-                    <th>Produto</th>
-                    <th>Código</th>
-                    <th>Categoria</th>
-                    <th>Estoque</th>
-                    <th>Mínimo</th>
-                    <th>Custo</th>
-                    <th>Valor</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {produtos.map((produto) => (
-                    <tr key={produto.id}>
-                      <td>
-                        <strong>{produto.nome}</strong>
-                      </td>
-
-                      <td>{produto.codigoBarras || '-'}</td>
-                      <td>{produto.categoria || '-'}</td>
-                      <td>{produto.estoque}</td>
-                      <td>{produto.estoqueMinimo}</td>
-                      <td>{formatarMoeda(produto.precoCusto)}</td>
-                      <td>
-                        {formatarMoeda(
-                          Number(produto.precoCusto || 0) *
-                            Number(produto.estoque || 0),
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </article>
       </>
     )
   }
