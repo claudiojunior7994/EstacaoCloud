@@ -1,7 +1,67 @@
 import { useEffect, useState } from 'react'
+import Login from './components/Login'
 import './App.css'
 
 function App() {
+  const [usuarioLogado, setUsuarioLogado] = useState(() => {
+    try {
+      const usuarioSalvo = localStorage.getItem('estacaocloud-usuario')
+      return usuarioSalvo ? JSON.parse(usuarioSalvo) : null
+    } catch {
+      return null
+    }
+  })
+
+  const [token, setToken] = useState(
+    () => localStorage.getItem('estacaocloud-token') || '',
+  )
+
+  const [verificandoSessao, setVerificandoSessao] = useState(true)
+
+  useEffect(() => {
+    async function validarSessao() {
+      if (!token) {
+        setVerificandoSessao(false)
+        return
+      }
+
+      try {
+        const resposta = await fetch('http://localhost:3000/api/me', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!resposta.ok) {
+          localStorage.removeItem('estacaocloud-token')
+          localStorage.removeItem('estacaocloud-usuario')
+          setToken('')
+          setUsuarioLogado(null)
+        }
+      } catch (erro) {
+        console.error('Erro ao validar sessão:', erro)
+      } finally {
+        setVerificandoSessao(false)
+      }
+    }
+
+    validarSessao()
+  }, [token])
+
+  function concluirLogin(usuario, novoToken) {
+    setUsuarioLogado(usuario)
+    setToken(novoToken)
+    setVerificandoSessao(false)
+  }
+
+  function sairDoSistema() {
+    localStorage.removeItem('estacaocloud-token')
+    localStorage.removeItem('estacaocloud-usuario')
+    setUsuarioLogado(null)
+    setToken('')
+    setPagina('visao-geral')
+  }
+
   const [pagina, setPagina] = useState('visao-geral')
   const [mostrarFormularioProduto, setMostrarFormularioProduto] =
     useState(false)
@@ -1817,6 +1877,20 @@ function App() {
     }
   }
 
+  if (verificandoSessao) {
+    return (
+      <div className="login-page">
+        <div className="login-card">
+          <p>Verificando acesso...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!token || !usuarioLogado) {
+    return <Login onLogin={concluirLogin} />
+  }
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -1958,18 +2032,27 @@ function App() {
 
           <div className="user-box">
             <div className="user-avatar">
-              A
+              {(usuarioLogado.nome || 'U').charAt(0).toUpperCase()}
             </div>
 
             <div>
               <strong>
-                Administrador
+                {usuarioLogado.nome || 'Usuário'}
               </strong>
 
               <span>
-                EstaçãoCloud
+                {usuarioLogado.perfil || 'operador'}
               </span>
             </div>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={sairDoSistema}
+              title="Sair do sistema"
+            >
+              Sair
+            </button>
           </div>
         </header>
 
