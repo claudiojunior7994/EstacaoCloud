@@ -11,6 +11,7 @@ const produtosRoutes = require('./routes/produtos')
 const fornecedoresRoutes = require('./routes/fornecedores')
 const clientesRoutes = require('./routes/clientes')
 const vendasRoutes = require('./routes/vendas')
+const caixaRoutes = require('./data/caixa')
 
 const autenticar = require('./middleware/auth')
 const permitirPerfis = require('./middleware/permissao')
@@ -20,8 +21,10 @@ const { testarConexao } = require('./database/db')
 const app = express()
 
 const PORT = Number(process.env.PORT) || 3000
+
 const CORS_ORIGIN =
-  process.env.CORS_ORIGIN || 'http://localhost:5173'
+  process.env.CORS_ORIGIN ||
+  'http://localhost:5173'
 
 app.disable('x-powered-by')
 
@@ -30,12 +33,25 @@ app.use(helmet())
 app.use(
   cors({
     origin: CORS_ORIGIN,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: [
+      'GET',
+      'POST',
+      'PUT',
+      'PATCH',
+      'DELETE',
+    ],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+    ],
   }),
 )
 
-app.use(express.json({ limit: '100kb' }))
+app.use(
+  express.json({
+    limit: '100kb',
+  }),
+)
 
 app.get('/', (req, res) => {
   res.json({
@@ -58,6 +74,7 @@ app.use('/api/produtos', produtosRoutes)
 app.use('/api/fornecedores', fornecedoresRoutes)
 app.use('/api/clientes', clientesRoutes)
 app.use('/api/vendas', vendasRoutes)
+app.use('/api/caixa', caixaRoutes)
 
 app.get('/api/me', autenticar, (req, res) => {
   res.status(200).json({
@@ -72,7 +89,8 @@ app.get(
   permitirPerfis('admin'),
   (req, res) => {
     res.status(200).json({
-      mensagem: 'Acesso de administrador autorizado.',
+      mensagem:
+        'Acesso de administrador autorizado.',
       usuario: req.usuario,
     })
   },
@@ -108,6 +126,7 @@ async function iniciarServidor() {
     console.log(' Fornecedores API: ativa')
     console.log(' Clientes API: ativa')
     console.log(' Vendas API: ativa')
+    console.log(' Caixa API: ativa')
     console.log('================================')
     console.log('')
   })

@@ -7,6 +7,10 @@ const {
   produtos,
 } = require('../data/produtosStore')
 
+const {
+  buscarCaixaAberto,
+} = require('../data/caixaStore')
+
 const router = express.Router()
 
 const vendas = []
@@ -48,11 +52,29 @@ router.post(
       clienteId,
       formaPagamento,
       desconto = 0,
+      terminal = '001',
     } = req.body
 
     if (!Array.isArray(itens) || itens.length === 0) {
       return res.status(400).json({
         erro: 'A venda precisa possuir pelo menos um item.',
+      })
+    }
+
+    const terminalNormalizado = String(
+      terminal || '001',
+    ).trim()
+
+    // Toda venda precisa estar vinculada
+    // a um caixa aberto.
+    const caixa = buscarCaixaAberto(
+      req.usuario.empresaId,
+      terminalNormalizado,
+    )
+
+    if (!caixa) {
+      return res.status(409).json({
+        erro: `O caixa ${terminalNormalizado} não está aberto.`,
       })
     }
 
@@ -75,7 +97,8 @@ router.post(
       const produto = produtos.find(
         (produtoAtual) =>
           produtoAtual.id === produtoId &&
-          produtoAtual.empresaId === req.usuario.empresaId,
+          produtoAtual.empresaId ===
+            req.usuario.empresaId,
       )
 
       if (!produto) {
@@ -103,7 +126,8 @@ router.post(
         nome: produto.nome,
         quantidade,
         precoUnitario,
-        subtotal: quantidade * precoUnitario,
+        subtotal:
+          quantidade * precoUnitario,
       })
     }
 
@@ -147,33 +171,71 @@ router.post(
       })
     }
 
+    const total =
+      subtotal - descontoNormalizado
+
     const agora = new Date().toISOString()
 
-    // Baixa o estoque somente depois de validar
-    // todos os itens da venda.
+    // Baixa o estoque somente depois
+    // de validar todos os itens.
     for (const itemVenda of itensNormalizados) {
       const produto = produtos.find(
         (produtoAtual) =>
           produtoAtual.id === itemVenda.produtoId &&
-          produtoAtual.empresaId === req.usuario.empresaId,
+          produtoAtual.empresaId ===
+            req.usuario.empresaId,
       )
 
       produto.estoque -= itemVenda.quantidade
       produto.atualizadoEm = agora
     }
 
+    // Atualiza o movimento financeiro
+    // do caixa conforme o pagamento.
+    if (pagamento === 'Dinheiro') {
+      caixa.vendasDinheiro =
+        Number(caixa.vendasDinheiro || 0) +
+        total
+    }
+
+    if (pagamento === 'Pix') {
+      caixa.vendasPix =
+        Number(caixa.vendasPix || 0) +
+        total
+    }
+
+    if (pagamento === 'Cartão de débito') {
+      caixa.vendasDebito =
+        Number(caixa.vendasDebito || 0) +
+        total
+    }
+
+    if (pagamento === 'Cartão de crédito') {
+      caixa.vendasCredito =
+        Number(caixa.vendasCredito || 0) +
+        total
+    }
+
     const venda = {
       id: proximoId++,
       empresaId: req.usuario.empresaId,
       usuarioId: req.usuario.id,
+
+      caixaId: caixa.id,
+      terminal: caixa.terminal,
+
       clienteId: clienteId
         ? Number(clienteId)
         : null,
+
       itens: itensNormalizados,
+
       subtotal,
       desconto: descontoNormalizado,
-      total: subtotal - descontoNormalizado,
+      total,
+
       formaPagamento: pagamento,
+
       status: 'concluida',
       criadaEm: agora,
     }
@@ -244,12 +306,62 @@ router.patch(
       const produto = produtos.find(
         (produtoAtual) =>
           produtoAtual.id === itemVenda.produtoId &&
-          produtoAtual.empresaId === req.usuario.empresaId,
+          produtoAtual.empresaId ===
+            req.usuario.empresaId,
       )
 
       if (produto) {
         produto.estoque += itemVenda.quantidade
         produto.atualizadoEm = agora
+      }
+    }
+
+    // Se o caixa da venda ainda estiver aberto,
+    // também estorna o valor do movimento dele.
+    const caixa = buscarCaixaAberto(
+      req.usuario.empresaId,
+      venda.terminal || '001',
+    )
+
+    if (caixa) {
+      const valor = Number(venda.total || 0)
+
+      if (venda.formaPagamento === 'Dinheiro') {
+        caixa.vendasDinheiro = Math.max(
+          0,
+          Number(caixa.vendasDinheiro || 0) -
+            valor,
+        )
+      }
+
+      if (venda.formaPagamento === 'Pix') {
+        caixa.vendasPix = Math.max(
+          0,
+          Number(caixa.vendasPix || 0) -
+            valor,
+        )
+      }
+
+      if (
+        venda.formaPagamento ===
+        'Cartão de débito'
+      ) {
+        caixa.vendasDebito = Math.max(
+          0,
+          Number(caixa.vendasDebito || 0) -
+            valor,
+        )
+      }
+
+      if (
+        venda.formaPagamento ===
+        'Cartão de crédito'
+      ) {
+        caixa.vendasCredito = Math.max(
+          0,
+          Number(caixa.vendasCredito || 0) -
+            valor,
+        )
       }
     }
 

@@ -1,0 +1,1425 @@
+/* =========================================================
+   ESTAÇÃOCLOUD PDV
+   LAYOUT DEFINITIVO - TELA CHEIA
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+
+  width: 100%;
+  height: 100%;
+
+  min-width: 100%;
+  min-height: 100%;
+}
+
+body {
+  overflow: hidden;
+}
+
+#root {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* =========================================================
+   ESTRUTURA PRINCIPAL
+   ========================================================= */
+
+.ec-pdv {
+  width: 100vw;
+  height: 100vh;
+
+  margin: 0;
+  padding: 0;
+
+  background: #eef3f7;
+  color: #15202b;
+
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  display: grid;
+
+  grid-template-rows:
+    76px
+    minmax(0, 1fr)
+    68px;
+
+  overflow: hidden;
+}
+
+/* =========================================================
+   BARRA SUPERIOR
+   ========================================================= */
+
+.ec-pdv-topbar {
+  width: 100%;
+
+  padding: 0 150px 0 22px;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(300px, 1fr)
+    auto
+    120px;
+
+  align-items: center;
+
+  gap: 24px;
+
+  position: relative;
+  z-index: 20;
+
+  background:
+    linear-gradient(
+      90deg,
+      #061b35 0%,
+      #073465 100%
+    );
+
+  color: #ffffff;
+
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.22);
+}
+
+.ec-pdv-marca {
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+}
+
+.ec-pdv-logo {
+  width: 46px;
+  height: 46px;
+
+  flex-shrink: 0;
+
+  border-radius: 11px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #1984df,
+      #1165b0
+    );
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 21px;
+  font-weight: 800;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.2);
+
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+.ec-pdv-marca strong {
+  display: block;
+
+  font-size: 21px;
+  font-weight: 800;
+
+  line-height: 1;
+}
+
+.ec-pdv-marca span {
+  display: block;
+
+  margin-top: 5px;
+
+  color: #b3cee6;
+
+  font-size: 12px;
+  font-weight: 500;
+
+  letter-spacing: 0.03em;
+}
+
+.ec-pdv-caixa-aberto {
+  min-width: 155px;
+  height: 42px;
+
+  padding: 0 20px;
+
+  border-radius: 22px;
+
+  background:
+    rgba(0, 0, 0, 0.22);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 9px;
+
+  font-size: 13px;
+  font-weight: 800;
+
+  letter-spacing: 0.06em;
+}
+
+.ec-pdv-status-dot {
+  width: 10px;
+  height: 10px;
+
+  border-radius: 50%;
+
+  background: #43da77;
+
+  box-shadow:
+    0 0 0 4px rgba(67, 218, 119, 0.15);
+}
+
+.ec-pdv-terminal {
+  justify-self: end;
+
+  min-width: 90px;
+
+  text-align: right;
+}
+
+.ec-pdv-terminal span {
+  display: block;
+
+  color: #a9cae6;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: 0.13em;
+}
+
+.ec-pdv-terminal strong {
+  display: block;
+
+  margin-top: 3px;
+
+  font-size: 27px;
+
+  line-height: 1;
+}
+
+/* botão "Sair do caixa" que está inline no JSX */
+
+.ec-pdv-topbar > button[type="button"] {
+  position: absolute !important;
+
+  top: 50% !important;
+  right: 17px !important;
+
+  transform: translateY(-50%) !important;
+
+  padding: 10px 14px !important;
+
+  border:
+    1px solid #456884 !important;
+
+  border-radius: 8px !important;
+
+  background:
+    #102b45 !important;
+
+  color: #ffffff !important;
+
+  font-size: 12px !important;
+  font-weight: 700 !important;
+
+  cursor: pointer !important;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.ec-pdv-topbar > button[type="button"]:hover {
+  background:
+    #183d5d !important;
+
+  border-color:
+    #5e86a5 !important;
+}
+
+/* =========================================================
+   CORPO
+   ========================================================= */
+
+.ec-pdv-main {
+  width: 100%;
+  height: 100%;
+
+  min-width: 0;
+  min-height: 0;
+
+  display: grid;
+
+  grid-template-columns:
+    295px
+    minmax(0, 1fr);
+
+  overflow: hidden;
+}
+
+/* =========================================================
+   LATERAL / PUBLICIDADE
+   ========================================================= */
+
+.ec-pdv-publicidade {
+  min-width: 0;
+  min-height: 0;
+
+  padding: 15px;
+
+  color: #ffffff;
+
+  background:
+    radial-gradient(
+      circle at 20% 20%,
+      #1593dd 0%,
+      transparent 40%
+    ),
+    linear-gradient(
+      160deg,
+      #006cb5,
+      #00447d 55%,
+      #062e54
+    );
+
+  overflow: hidden;
+}
+
+.ec-pdv-publicidade-conteudo {
+  width: 100%;
+  height: 100%;
+
+  padding: 27px 22px;
+
+  border-radius: 17px;
+
+  background:
+    rgba(255, 255, 255, 0.07);
+
+  border:
+    1px solid rgba(255, 255, 255, 0.16);
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+}
+
+.ec-pdv-publicidade-logo {
+  font-size: 24px;
+  font-weight: 300;
+}
+
+.ec-pdv-publicidade-logo strong {
+  margin-left: 5px;
+
+  font-weight: 800;
+}
+
+.ec-pdv-publicidade-texto {
+  margin-top:
+    clamp(
+      38px,
+      7vh,
+      85px
+    );
+}
+
+.ec-pdv-publicidade-texto > span {
+  color: #a6e1ff;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  letter-spacing: 0.15em;
+}
+
+.ec-pdv-publicidade-texto h2 {
+  margin: 12px 0 14px;
+
+  font-size:
+    clamp(
+      31px,
+      2.5vw,
+      40px
+    );
+
+  font-weight: 700;
+
+  line-height: 1.02;
+
+  letter-spacing: -0.04em;
+}
+
+.ec-pdv-publicidade-texto p {
+  max-width: 220px;
+
+  margin: 0;
+
+  color: #def2ff;
+
+  font-size: 14px;
+
+  line-height: 1.55;
+}
+
+.ec-pdv-oferta {
+  margin-top: auto;
+
+  padding: 17px;
+
+  border-radius: 13px;
+
+  background: #ffffff;
+
+  color: #083760;
+
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.22);
+}
+
+.ec-pdv-oferta span {
+  display: block;
+
+  color: #2870ad;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: 0.12em;
+}
+
+.ec-pdv-oferta strong {
+  display: block;
+
+  margin-top: 5px;
+
+  font-size: 19px;
+}
+
+.ec-pdv-oferta small {
+  display: block;
+
+  margin-top: 5px;
+
+  color: #688098;
+
+  font-size: 12px;
+}
+
+/* =========================================================
+   OPERAÇÃO
+   ========================================================= */
+
+.ec-pdv-operacao {
+  width: 100%;
+  height: 100%;
+
+  min-width: 0;
+  min-height: 0;
+
+  padding: 13px;
+
+  background: #f2f5f8;
+
+  display: grid;
+
+  grid-template-rows:
+    auto
+    auto
+    minmax(0, 1fr)
+    auto;
+
+  gap: 10px;
+
+  overflow: hidden;
+}
+
+/* =========================================================
+   PRODUTO ATUAL
+   ========================================================= */
+
+.ec-pdv-produto-destaque {
+  width: 100%;
+
+  min-height: 116px;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(330px, 1fr)
+    minmax(500px, 48%);
+
+  background: #ffffff;
+
+  border:
+    1px solid #d2dce5;
+
+  border-radius: 13px;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 3px 12px rgba(31, 55, 75, 0.07);
+}
+
+.ec-pdv-produto-nome {
+  min-width: 0;
+
+  padding: 19px 24px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  text-align: center;
+}
+
+.ec-pdv-produto-nome span,
+.ec-pdv-produto-valores span {
+  color: #698095;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: 0.11em;
+}
+
+.ec-pdv-produto-nome strong {
+  margin-top: 8px;
+
+  color: #d8232f;
+
+  font-size:
+    clamp(
+      28px,
+      2.3vw,
+      39px
+    );
+
+  font-weight: 800;
+
+  line-height: 1.02;
+}
+
+.ec-pdv-produto-valores {
+  min-width: 0;
+
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    1fr
+    1.2fr;
+
+  border-left:
+    1px solid #dfe6ec;
+}
+
+.ec-pdv-produto-valores > div {
+  min-width: 0;
+
+  padding: 15px;
+
+  border-left:
+    1px solid #e7edf2;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+}
+
+.ec-pdv-produto-valores strong {
+  margin-top: 8px;
+
+  font-size:
+    clamp(
+      20px,
+      1.55vw,
+      25px
+    );
+
+  font-weight: 800;
+}
+
+.ec-pdv-preco-total-produto {
+  background: #f7fafc;
+}
+
+.ec-pdv-preco-total-produto strong {
+  color: #d8232f;
+
+  font-size:
+    clamp(
+      25px,
+      2vw,
+      32px
+    );
+}
+
+/* =========================================================
+   CÓDIGO DE BARRAS
+   ========================================================= */
+
+.ec-pdv-leitura {
+  width: 100%;
+
+  padding: 10px 14px;
+
+  background: #ffffff;
+
+  border:
+    1px solid #d2dce5;
+
+  border-radius: 11px;
+
+  display: grid;
+
+  grid-template-columns:
+    200px
+    minmax(0, 1fr);
+
+  align-items: center;
+
+  gap: 13px;
+}
+
+.ec-pdv-leitura > span {
+  color: #536d82;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  letter-spacing: 0.07em;
+}
+
+.ec-pdv-leitura input {
+  width: 100%;
+
+  height: 47px;
+
+  padding: 0 16px;
+
+  border:
+    2px solid #1476c8;
+
+  border-radius: 8px;
+
+  outline: none;
+
+  background: #fbfdff;
+
+  color: #182b3b;
+
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.ec-pdv-leitura input::placeholder {
+  color: #7d8e9d;
+}
+
+.ec-pdv-leitura input:focus {
+  border-color: #075d9f;
+
+  box-shadow:
+    0 0 0 3px rgba(21, 119, 202, 0.13);
+}
+
+/* =========================================================
+   LISTA DOS ITENS
+   ========================================================= */
+
+.ec-pdv-lista {
+  width: 100%;
+  height: 100%;
+
+  min-height: 0;
+
+  background: #ffffff;
+
+  border:
+    1px solid #d2dce5;
+
+  border-radius: 13px;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 3px 12px rgba(31, 55, 75, 0.06);
+}
+
+.ec-pdv-lista-cabecalho,
+.ec-pdv-item {
+  display: grid;
+
+  grid-template-columns:
+    65px
+    minmax(260px, 1fr)
+    100px
+    135px
+    145px;
+
+  gap: 10px;
+
+  align-items: center;
+}
+
+.ec-pdv-lista-cabecalho {
+  height: 46px;
+
+  padding: 0 17px;
+
+  background: #e4ecf3;
+
+  color: #324d63;
+
+  border-bottom:
+    1px solid #c9d6df;
+
+  font-size: 10px;
+  font-weight: 900;
+
+  letter-spacing: 0.08em;
+}
+
+.ec-pdv-lista-corpo {
+  height:
+    calc(100% - 46px);
+
+  overflow-y: auto;
+}
+
+.ec-pdv-lista-vazia {
+  width: 100%;
+  height: 100%;
+
+  min-height: 160px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  color: #8295a5;
+}
+
+.ec-pdv-carrinho-icone {
+  font-size: 42px;
+
+  filter: grayscale(1);
+
+  opacity: 0.37;
+}
+
+.ec-pdv-lista-vazia strong {
+  margin-top: 8px;
+
+  color: #627b8f;
+
+  font-size: 18px;
+}
+
+.ec-pdv-lista-vazia span {
+  margin-top: 5px;
+
+  font-size: 12px;
+}
+
+.ec-pdv-item {
+  min-height: 51px;
+
+  padding: 0 17px;
+
+  border-bottom:
+    1px solid #e8eef2;
+
+  color: #223b4e;
+
+  font-size: 14px;
+}
+
+.ec-pdv-item strong {
+  font-weight: 750;
+}
+
+.ec-pdv-item:nth-child(even) {
+  background: #f7fafc;
+}
+
+/* =========================================================
+   TOTAL / ATENDIMENTO
+   ========================================================= */
+
+.ec-pdv-base {
+  width: 100%;
+
+  min-height: 100px;
+
+  background: #ffffff;
+
+  border:
+    1px solid #d2dce5;
+
+  border-radius: 13px;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(300px, 1fr)
+    minmax(360px, 430px);
+
+  overflow: hidden;
+}
+
+.ec-pdv-atendimento {
+  padding: 15px 21px;
+
+  display: flex;
+  flex-direction: column;
+
+  justify-content: center;
+}
+
+.ec-pdv-atendimento > span {
+  color: #62798d;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: 0.11em;
+}
+
+.ec-pdv-atendimento > strong {
+  display: block;
+
+  margin-top: 5px;
+
+  color: #172b3a;
+
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.ec-pdv-info-venda {
+  margin-top: 12px;
+
+  display: flex;
+
+  gap: 30px;
+
+  color: #61798d;
+
+  font-size: 12px;
+}
+
+.ec-pdv-info-venda b {
+  color: #142a3c;
+
+  font-weight: 800;
+}
+
+.ec-pdv-total-venda {
+  min-width: 0;
+
+  padding: 11px 24px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #08294e,
+      #0b4d89
+    );
+
+  color: #ffffff;
+
+  text-align: right;
+
+  display: flex;
+  flex-direction: column;
+
+  justify-content: center;
+}
+
+.ec-pdv-total-venda span {
+  color: #b5d3ec;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  letter-spacing: 0.13em;
+}
+
+.ec-pdv-total-venda strong {
+  margin-top: 4px;
+
+  font-size:
+    clamp(
+      44px,
+      4.2vw,
+      65px
+    );
+
+  font-weight: 850;
+
+  line-height: 0.93;
+
+  letter-spacing: -0.055em;
+}
+
+/* =========================================================
+   ATALHOS
+   ========================================================= */
+
+.ec-pdv-atalhos {
+  width: 100%;
+
+  padding: 8px 7px;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(6, minmax(0, 1fr));
+
+  gap: 6px;
+
+  background: #07192d;
+}
+
+.ec-pdv-atalhos button {
+  min-width: 0;
+
+  border:
+    1px solid #31516e;
+
+  border-radius: 8px;
+
+  background: #112e49;
+
+  color: #e5f1fa;
+
+  cursor: pointer;
+
+  font-size: 12px;
+  font-weight: 750;
+
+  white-space: nowrap;
+
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+
+.ec-pdv-atalhos button:hover {
+  background: #1a4265;
+
+  transform: translateY(-1px);
+}
+
+.ec-pdv-atalhos kbd {
+  margin-right: 8px;
+
+  padding: 5px 7px;
+
+  border-radius: 5px;
+
+  background: #2272b4;
+
+  color: #ffffff;
+
+  font-family: inherit;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.ec-pdv-atalho-sangria {
+  background:
+    #493b18 !important;
+
+  border-color:
+    #776021 !important;
+}
+
+.ec-pdv-atalho-sangria:hover {
+  background:
+    #5b491b !important;
+}
+
+.ec-pdv-atalho-sangria kbd {
+  background: #bf8512;
+}
+
+.ec-pdv-atalho-cancelar {
+  background:
+    #421e27 !important;
+
+  border-color:
+    #703542 !important;
+}
+
+.ec-pdv-atalho-cancelar:hover {
+  background:
+    #572631 !important;
+}
+
+.ec-pdv-atalho-cancelar kbd {
+  background: #c33a4d;
+}
+
+/* =========================================================
+   MODAL SANGRIA
+   ========================================================= */
+
+.ec-modal-overlay {
+  position: fixed;
+
+  z-index: 9999;
+
+  inset: 0;
+
+  padding: 24px;
+
+  background:
+    rgba(3, 13, 23, 0.8);
+
+  backdrop-filter:
+    blur(5px);
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+}
+
+.ec-modal-sangria {
+  width:
+    min(
+      530px,
+      100%
+    );
+
+  max-height: 92vh;
+
+  overflow-y: auto;
+
+  border-radius: 17px;
+
+  background: #ffffff;
+
+  color: #172735;
+
+  box-shadow:
+    0 25px 80px rgba(0, 0, 0, 0.38);
+}
+
+.ec-modal-cabecalho {
+  padding: 21px 23px;
+
+  border-bottom:
+    1px solid #e2e8ed;
+
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ec-modal-cabecalho span {
+  color: #3474aa;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: 0.12em;
+}
+
+.ec-modal-cabecalho h2 {
+  margin: 4px 0 0;
+
+  font-size: 27px;
+}
+
+.ec-modal-fechar {
+  width: 39px;
+  height: 39px;
+
+  border: none;
+
+  border-radius: 50%;
+
+  background: #edf2f6;
+
+  color: #53697b;
+
+  cursor: pointer;
+
+  font-size: 26px;
+}
+
+.ec-modal-sangria form {
+  padding: 23px;
+}
+
+.ec-autorizacao-aviso {
+  margin-bottom: 20px;
+
+  padding: 16px;
+
+  border:
+    1px solid #e5d29e;
+
+  border-radius: 10px;
+
+  background: #fff9e9;
+
+  display: flex;
+
+  gap: 13px;
+}
+
+.ec-autorizacao-cadeado {
+  font-size: 29px;
+}
+
+.ec-autorizacao-aviso strong {
+  display: block;
+
+  color: #644b14;
+
+  font-size: 14px;
+}
+
+.ec-autorizacao-aviso p {
+  margin: 5px 0 0;
+
+  color: #786331;
+
+  font-size: 12px;
+
+  line-height: 1.45;
+}
+
+.ec-modal-campo {
+  display: block;
+
+  margin-top: 16px;
+}
+
+.ec-modal-campo > span {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: #506779;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ec-modal-campo input,
+.ec-modal-campo select {
+  width: 100%;
+  height: 49px;
+
+  padding: 0 14px;
+
+  border:
+    1px solid #c9d5df;
+
+  border-radius: 8px;
+
+  outline: none;
+
+  background: #f9fbfc;
+
+  color: #172735;
+
+  font-size: 14px;
+}
+
+.ec-modal-campo input:focus,
+.ec-modal-campo select:focus {
+  border-color: #1775c3;
+
+  box-shadow:
+    0 0 0 3px rgba(23, 117, 195, 0.11);
+}
+
+.ec-campo-moeda {
+  display: flex;
+
+  align-items: center;
+
+  border:
+    2px solid #1677c8;
+
+  border-radius: 9px;
+
+  overflow: hidden;
+}
+
+.ec-campo-moeda b {
+  padding: 0 14px;
+
+  color: #376783;
+}
+
+.ec-campo-moeda input {
+  border: none;
+
+  border-radius: 0;
+
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.ec-campo-moeda input:focus {
+  box-shadow: none;
+}
+
+.ec-modal-erro {
+  margin-top: 14px;
+
+  padding: 11px 13px;
+
+  border-radius: 7px;
+
+  background: #fff0f1;
+
+  border:
+    1px solid #f0c7cb;
+
+  color: #a22d39;
+
+  font-size: 12px;
+}
+
+.ec-autorizado {
+  margin-bottom: 18px;
+
+  padding: 12px 14px;
+
+  border-radius: 8px;
+
+  background: #eaf8ef;
+
+  border:
+    1px solid #b8e3c5;
+
+  color: #227542;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ec-modal-acoes {
+  margin-top: 23px;
+
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    1.5fr;
+
+  gap: 9px;
+}
+
+.ec-modal-acoes button {
+  min-height: 48px;
+
+  border-radius: 8px;
+
+  cursor: pointer;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ec-botao-secundario {
+  border:
+    1px solid #cad5de;
+
+  background: #f4f7f9;
+
+  color: #455b6c;
+}
+
+.ec-botao-principal {
+  border:
+    1px solid #1263a7;
+
+  background: #1677c8;
+
+  color: #ffffff;
+}
+
+.ec-botao-principal:disabled {
+  opacity: 0.65;
+
+  cursor: wait;
+}
+
+.ec-botao-sangria {
+  border:
+    1px solid #9f6a08;
+
+  background: #c98915;
+
+  color: #ffffff;
+}
+
+/* =========================================================
+   MONITORES GRANDES
+   ========================================================= */
+
+@media (min-width: 1600px) {
+  .ec-pdv-main {
+    grid-template-columns:
+      325px
+      minmax(0, 1fr);
+  }
+
+  .ec-pdv-operacao {
+    padding: 16px;
+
+    gap: 12px;
+  }
+
+  .ec-pdv-lista-cabecalho {
+    font-size: 11px;
+  }
+
+  .ec-pdv-item {
+    font-size: 15px;
+  }
+}
+
+/* =========================================================
+   MONITORES MÉDIOS
+   ========================================================= */
+
+@media (max-width: 1200px) {
+  .ec-pdv-main {
+    grid-template-columns:
+      235px
+      minmax(0, 1fr);
+  }
+
+  .ec-pdv-publicidade {
+    padding: 11px;
+  }
+
+  .ec-pdv-publicidade-conteudo {
+    padding: 19px;
+  }
+
+  .ec-pdv-publicidade-texto h2 {
+    font-size: 29px;
+  }
+
+  .ec-pdv-produto-destaque {
+    grid-template-columns:
+      minmax(250px, 1fr)
+      minmax(430px, 55%);
+  }
+
+  .ec-pdv-lista-cabecalho,
+  .ec-pdv-item {
+    grid-template-columns:
+      50px
+      minmax(180px, 1fr)
+      80px
+      110px
+      120px;
+  }
+}
+
+/* =========================================================
+   TELAS MAIS BAIXAS
+   ========================================================= */
+
+@media (max-height: 750px) {
+  .ec-pdv {
+    grid-template-rows:
+      64px
+      minmax(0, 1fr)
+      59px;
+  }
+
+  .ec-pdv-topbar {
+    padding-left: 15px;
+  }
+
+  .ec-pdv-logo {
+    width: 39px;
+    height: 39px;
+  }
+
+  .ec-pdv-marca strong {
+    font-size: 18px;
+  }
+
+  .ec-pdv-produto-destaque {
+    min-height: 98px;
+  }
+
+  .ec-pdv-produto-nome strong {
+    font-size: 27px;
+  }
+
+  .ec-pdv-leitura input {
+    height: 40px;
+  }
+
+  .ec-pdv-base {
+    min-height: 82px;
+  }
+
+  .ec-pdv-total-venda strong {
+    font-size: 45px;
+  }
+
+  .ec-pdv-publicidade-texto {
+    margin-top: 24px;
+  }
+
+  .ec-pdv-publicidade-texto h2 {
+    font-size: 29px;
+  }
+
+  .ec-pdv-publicidade-texto p {
+    font-size: 12px;
+  }
+
+  .ec-pdv-oferta {
+    padding: 12px;
+  }
+}

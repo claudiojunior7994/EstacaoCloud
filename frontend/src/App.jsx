@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Login from './components/Login'
+import Pdv from './components/pdv/Pdv'
 import './App.css'
 
 function App() {
@@ -14,6 +15,10 @@ function App() {
 
   const [token, setToken] = useState(
     () => localStorage.getItem('estacaocloud-token') || '',
+  )
+
+  const [ambiente, setAmbiente] = useState(
+    () => localStorage.getItem('estacaocloud-ambiente') || '',
   )
 
   const [verificandoSessao, setVerificandoSessao] = useState(true)
@@ -48,24 +53,28 @@ function App() {
     validarSessao()
   }, [token])
 
-  function concluirLogin(usuario, novoToken) {
+  function concluirLogin(usuario, novoToken, ambienteAcesso = 'gestao') {
+    localStorage.setItem('estacaocloud-ambiente', ambienteAcesso)
     setUsuarioLogado(usuario)
     setToken(novoToken)
+    setAmbiente(ambienteAcesso)
+    setPagina(ambienteAcesso === 'estoque' ? 'produtos' : 'visao-geral')
     setVerificandoSessao(false)
   }
 
   function sairDoSistema() {
     localStorage.removeItem('estacaocloud-token')
     localStorage.removeItem('estacaocloud-usuario')
+    localStorage.removeItem('estacaocloud-ambiente')
     setUsuarioLogado(null)
     setToken('')
+    setAmbiente('')
     setPagina('visao-geral')
   }
 
   const [pagina, setPagina] = useState('visao-geral')
 
   const [vendas, setVendas] = useState([])
-  const [mostrarPdv, setMostrarPdv] = useState(false)
   const [produtoPdvId, setProdutoPdvId] = useState('')
   const [quantidadePdv, setQuantidadePdv] = useState(1)
   const [itensVenda, setItensVenda] = useState([])
@@ -228,13 +237,8 @@ function App() {
   }, [token])
 
   function iniciarVenda() {
-    setItensVenda([])
-    setProdutoPdvId('')
-    setQuantidadePdv(1)
-    setClienteVendaId('')
-    setFormaPagamento('Pix')
-    setDescontoVenda('0')
-    setMostrarPdv(true)
+    localStorage.setItem('estacaocloud-ambiente', 'pdv')
+    setAmbiente('pdv')
   }
 
   function adicionarItemVenda() {
@@ -417,6 +421,13 @@ function App() {
   }
 
   function abrirPagina(nomePagina) {
+    if (
+      ambiente === 'estoque' &&
+      !['produtos', 'fornecedores'].includes(nomePagina)
+    ) {
+      return
+    }
+
     setPagina(nomePagina)
     setMostrarFormularioProduto(false)
     setMostrarFormularioFornecedor(false)
@@ -750,6 +761,33 @@ function App() {
     })
   }
 
+  function chaveDataLocal(valor = new Date()) {
+    const data = valor instanceof Date ? valor : new Date(valor)
+
+    if (Number.isNaN(data.getTime())) {
+      return ''
+    }
+
+    const ano = data.getFullYear()
+    const mes = String(data.getMonth() + 1).padStart(2, '0')
+    const dia = String(data.getDate()).padStart(2, '0')
+
+    return `${ano}-${mes}-${dia}`
+  }
+
+  const chaveHoje = chaveDataLocal()
+
+  const vendasHojeGerais = vendas.filter(
+    (venda) =>
+      chaveDataLocal(venda.criadaEm) === chaveHoje &&
+      venda.status !== 'cancelada',
+  )
+
+  const faturamentoHojeGeral = vendasHojeGerais.reduce(
+    (total, venda) => total + Number(venda.total || 0),
+    0,
+  )
+
   const totalProdutos = produtos.length
 
   const produtosEstoqueBaixo = produtos.filter(
@@ -1067,10 +1105,12 @@ function App() {
               <span className="card-icon">💰</span>
             </div>
 
-            <strong>R$ 0,00</strong>
+            <strong>{formatarMoeda(faturamentoHojeGeral)}</strong>
 
             <small>
-              Nenhuma venda registrada
+              {vendasHojeGerais.length === 0
+                ? 'Nenhuma venda registrada hoje'
+                : `${vendasHojeGerais.length} venda(s) realizada(s) hoje`}
             </small>
           </article>
 
@@ -1349,10 +1389,9 @@ function App() {
   }
 
   function renderVendas() {
-    const hoje = new Date().toISOString().slice(0, 10)
     const vendasHoje = vendas.filter(
       (venda) =>
-        String(venda.criadaEm || '').slice(0, 10) === hoje &&
+        chaveDataLocal(venda.criadaEm) === chaveHoje &&
         venda.status !== 'cancelada',
     )
     const faturamentoHoje = vendasHoje.reduce(
@@ -1430,163 +1469,6 @@ function App() {
             <small>Produtos vendidos hoje</small>
           </article>
         </section>
-
-        {mostrarPdv && (
-          <article className="panel product-form-panel">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">NOVA OPERAÇÃO</p>
-                <h3>PDV — Nova venda</h3>
-              </div>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => setMostrarPdv(false)}
-              >
-                Fechar
-              </button>
-            </div>
-
-            <div className="product-form">
-              <div className="form-group form-group-large">
-                <label>Produto</label>
-                <select
-                  value={produtoPdvId}
-                  onChange={(evento) => setProdutoPdvId(evento.target.value)}
-                >
-                  <option value="">Selecione um produto</option>
-                  {produtos
-                    .filter((produto) => Number(produto.estoque || 0) > 0)
-                    .map((produto) => (
-                      <option key={produto.id} value={produto.id}>
-                        {produto.nome} — {formatarMoeda(produto.precoVenda)} — estoque {produto.estoque}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Quantidade</label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={quantidadePdv}
-                  onChange={(evento) => setQuantidadePdv(evento.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>&nbsp;</label>
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={adicionarItemVenda}
-                >
-                  + Adicionar item
-                </button>
-              </div>
-
-              <div className="form-group">
-                <label>Cliente</label>
-                <select
-                  value={clienteVendaId}
-                  onChange={(evento) => setClienteVendaId(evento.target.value)}
-                >
-                  <option value="">Consumidor não identificado</option>
-                  {clientes
-                    .filter((cliente) => cliente.ativo !== false)
-                    .map((cliente) => (
-                      <option key={cliente.id} value={cliente.id}>
-                        {cliente.nome}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Forma de pagamento</label>
-                <select
-                  value={formaPagamento}
-                  onChange={(evento) => setFormaPagamento(evento.target.value)}
-                >
-                  <option value="Pix">Pix</option>
-                  <option value="Dinheiro">Dinheiro</option>
-                  <option value="Cartão de débito">Cartão de débito</option>
-                  <option value="Cartão de crédito">Cartão de crédito</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Desconto (R$)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={descontoVenda}
-                  onChange={(evento) => setDescontoVenda(evento.target.value)}
-                />
-              </div>
-            </div>
-
-            {itensVenda.length === 0 ? (
-              <div className="empty-chart">
-                <p>Nenhum item adicionado à venda.</p>
-              </div>
-            ) : (
-              <div className="products-table-wrapper">
-                <table className="products-table">
-                  <thead>
-                    <tr>
-                      <th>Produto</th>
-                      <th>Qtd.</th>
-                      <th>Unitário</th>
-                      <th>Subtotal</th>
-                      <th className="actions-column">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {itensVenda.map((item) => (
-                      <tr key={item.produtoId}>
-                        <td><strong>{item.nome}</strong></td>
-                        <td>{item.quantidade}</td>
-                        <td>{formatarMoeda(item.precoUnitario)}</td>
-                        <td>
-                          {formatarMoeda(
-                            item.quantidade * item.precoUnitario,
-                          )}
-                        </td>
-                        <td className="product-actions">
-                          <button
-                            type="button"
-                            className="table-action-button danger"
-                            onClick={() => removerItemVenda(item.produtoId)}
-                          >
-                            🗑️ Remover
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            <div className="form-actions">
-              <strong>
-                Subtotal: {formatarMoeda(subtotalVenda)} | Total:{' '}
-                {formatarMoeda(totalVenda)}
-              </strong>
-              <button
-                type="button"
-                className="primary-button"
-                onClick={finalizarVenda}
-              >
-                Finalizar venda
-              </button>
-            </div>
-          </article>
-        )}
 
         <article className="panel">
           <div className="panel-header">
@@ -2678,6 +2560,16 @@ function App() {
     return <Login onLogin={concluirLogin} />
   }
 
+  if (ambiente === 'pdv') {
+    return (
+      <Pdv
+        usuario={usuarioLogado}
+        token={token}
+        onSair={sairDoSistema}
+      />
+    )
+  }
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -2692,109 +2584,109 @@ function App() {
             </h1>
 
             <p>
-              Gestão inteligente para o varejo
+              {ambiente === 'estoque'
+                ? 'Operação de estoque e cadastro'
+                : 'Gestão inteligente para o varejo'}
             </p>
           </div>
         </div>
 
         <nav className="menu">
-          <button
-            type="button"
-            className={`menu-item ${
-              pagina === 'visao-geral'
-                ? 'active'
-                : ''
-            }`}
-            onClick={() =>
-              abrirPagina('visao-geral')
-            }
-          >
-            🏠 Visão geral
-          </button>
+          {ambiente === 'estoque' ? (
+            <>
+              <button
+                type="button"
+                className={`menu-item ${
+                  pagina === 'produtos' ? 'active' : ''
+                }`}
+                onClick={() => abrirPagina('produtos')}
+              >
+                📦 Produtos
+              </button>
 
-          <button
-            type="button"
-            className={`menu-item ${
-              pagina === 'produtos'
-                ? 'active'
-                : ''
-            }`}
-            onClick={() =>
-              abrirPagina('produtos')
-            }
-          >
-            📦 Produtos
-          </button>
+              <button
+                type="button"
+                className={`menu-item ${
+                  pagina === 'fornecedores' ? 'active' : ''
+                }`}
+                onClick={() => abrirPagina('fornecedores')}
+              >
+                🚚 Fornecedores
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={`menu-item ${
+                  pagina === 'visao-geral' ? 'active' : ''
+                }`}
+                onClick={() => abrirPagina('visao-geral')}
+              >
+                🏠 Visão geral
+              </button>
 
-          <button
-            type="button"
-            className={`menu-item ${
-              pagina === 'vendas'
-                ? 'active'
-                : ''
-            }`}
-            onClick={() =>
-              abrirPagina('vendas')
-            }
-          >
-            🛒 Vendas
-          </button>
+              <button
+                type="button"
+                className={`menu-item ${
+                  pagina === 'produtos' ? 'active' : ''
+                }`}
+                onClick={() => abrirPagina('produtos')}
+              >
+                📦 Produtos
+              </button>
 
-          <button
-            type="button"
-            className={`menu-item ${
-              pagina === 'clientes'
-                ? 'active'
-                : ''
-            }`}
-            onClick={() =>
-              abrirPagina('clientes')
-            }
-          >
-            👥 Clientes
-          </button>
+              <button
+                type="button"
+                className={`menu-item ${
+                  pagina === 'vendas' ? 'active' : ''
+                }`}
+                onClick={() => abrirPagina('vendas')}
+              >
+                🛒 Vendas
+              </button>
 
-          <button
-            type="button"
-            className={`menu-item ${
-              pagina === 'fornecedores'
-                ? 'active'
-                : ''
-            }`}
-            onClick={() =>
-              abrirPagina('fornecedores')
-            }
-          >
-            🚚 Fornecedores
-          </button>
+              <button
+                type="button"
+                className={`menu-item ${
+                  pagina === 'clientes' ? 'active' : ''
+                }`}
+                onClick={() => abrirPagina('clientes')}
+              >
+                👥 Clientes
+              </button>
 
-          <button
-            type="button"
-            className={`menu-item ${
-              pagina === 'relatorios'
-                ? 'active'
-                : ''
-            }`}
-            onClick={() =>
-              abrirPagina('relatorios')
-            }
-          >
-            📊 Relatórios
-          </button>
+              <button
+                type="button"
+                className={`menu-item ${
+                  pagina === 'fornecedores' ? 'active' : ''
+                }`}
+                onClick={() => abrirPagina('fornecedores')}
+              >
+                🚚 Fornecedores
+              </button>
 
-          <button
-            type="button"
-            className={`menu-item ${
-              pagina === 'configuracoes'
-                ? 'active'
-                : ''
-            }`}
-            onClick={() =>
-              abrirPagina('configuracoes')
-            }
-          >
-            ⚙️ Configurações
-          </button>
+              <button
+                type="button"
+                className={`menu-item ${
+                  pagina === 'relatorios' ? 'active' : ''
+                }`}
+                onClick={() => abrirPagina('relatorios')}
+              >
+                📊 Relatórios
+              </button>
+
+              <button
+                type="button"
+                className={`menu-item ${
+                  pagina === 'configuracoes' ? 'active' : ''
+                }`}
+                onClick={() => abrirPagina('configuracoes')}
+              >
+                ⚙️ Configurações
+              </button>
+            </>
+          )}
         </nav>
 
         <div className="sidebar-footer">
@@ -2808,7 +2700,9 @@ function App() {
         <header className="topbar">
           <div>
             <p className="eyebrow">
-              PAINEL ADMINISTRATIVO
+              {ambiente === 'estoque'
+                ? 'PAINEL OPERACIONAL'
+                : 'PAINEL ADMINISTRATIVO'}
             </p>
 
             <h2>
