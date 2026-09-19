@@ -1,106 +1,75 @@
 const express = require('express')
-
+const { pool } = require('../database/db')
 const autenticar = require('../middleware/auth')
 const permitirPerfis = require('../middleware/permissao')
 
 const router = express.Router()
 
-// Temporário até conectarmos o PostgreSQL.
-const fornecedores = []
-let proximoId = 1
-
 function texto(valor) {
   return String(valor || '').trim()
 }
 
+function mapFornecedor(r) {
+  return {
+    id: r.id,
+    empresaId: r.empresa_id,
+    nome: r.nome,
+    cnpj: r.cnpj || '',
+    telefone: r.telefone || '',
+    email: r.email || '',
+    ativo: r.ativo,
+    criadoEm: r.criado_em,
+    atualizadoEm: r.atualizado_em,
+  }
+}
+
+// LISTAR
 router.get(
   '/',
   autenticar,
   permitirPerfis('admin', 'gerente', 'operador'),
-  (req, res) => {
-    return res.status(200).json({
-      fornecedores: fornecedores.filter(
-        (fornecedor) =>
-          fornecedor.empresaId === req.usuario.empresaId,
-      ),
-    })
+  async (req, res) => {
+    try {
+      const resultado = await pool.query(
+        `
+        SELECT *
+        FROM fornecedores
+        WHERE empresa_id = $1
+        ORDER BY nome
+        `,
+        [req.usuario.empresaId],
+      )
+
+      return res.status(200).json({
+        fornecedores:
+          resultado.rows.map(mapFornecedor),
+      })
+    } catch (erro) {
+      console.error(
+        'Erro ao listar fornecedores:',
+        erro,
+      )
+
+      return res.status(500).json({
+        erro: 'Não foi possível carregar os fornecedores.',
+      })
+    }
   },
 )
 
+// CRIAR
 router.post(
   '/',
   autenticar,
   permitirPerfis('admin', 'gerente'),
-  (req, res) => {
-    const nome = texto(req.body.nome)
-    const cnpj = texto(req.body.cnpj)
-    const telefone = texto(req.body.telefone)
-    const email = texto(req.body.email).toLowerCase()
-
-    if (!nome) {
-      return res.status(400).json({
-        erro: 'Nome do fornecedor é obrigatório.',
-      })
-    }
-
-    if (cnpj) {
-      const duplicado = fornecedores.some(
-        (fornecedor) =>
-          fornecedor.empresaId === req.usuario.empresaId &&
-          fornecedor.cnpj === cnpj,
-      )
-
-      if (duplicado) {
-        return res.status(409).json({
-          erro: 'Já existe um fornecedor com esse CNPJ.',
-        })
-      }
-    }
-
-    const agora = new Date().toISOString()
-
-    const fornecedor = {
-      id: proximoId++,
-      empresaId: req.usuario.empresaId,
-      nome,
-      cnpj,
-      telefone,
-      email,
-      ativo: true,
-      criadoEm: agora,
-      atualizadoEm: agora,
-    }
-
-    fornecedores.push(fornecedor)
-
-    return res.status(201).json({
-      mensagem: 'Fornecedor cadastrado com sucesso.',
-      fornecedor,
-    })
-  },
-)
-
-router.patch(
-  '/:id',
-  autenticar,
-  permitirPerfis('admin', 'gerente'),
-  (req, res) => {
-    const id = Number(req.params.id)
-
-    const fornecedor = fornecedores.find(
-      (item) =>
-        item.id === id &&
-        item.empresaId === req.usuario.empresaId,
-    )
-
-    if (!fornecedor) {
-      return res.status(404).json({
-        erro: 'Fornecedor não encontrado.',
-      })
-    }
-
-    if (req.body.nome !== undefined) {
+  async (req, res) => {
+    try {
       const nome = texto(req.body.nome)
+      const cnpj = texto(req.body.cnpj)
+      const telefone = texto(req.body.telefone)
+      const email = texto(
+        req.body.email,
+      ).toLowerCase()
 
       if (!nome) {
         return res.status(400).json({
@@ -108,71 +77,207 @@ router.patch(
         })
       }
 
-      fornecedor.nome = nome
-    }
-
-    if (req.body.cnpj !== undefined) {
-      const cnpj = texto(req.body.cnpj)
-
-      if (cnpj) {
-        const duplicado = fornecedores.some(
-          (item) =>
-            item.id !== fornecedor.id &&
-            item.empresaId === req.usuario.empresaId &&
-            item.cnpj === cnpj,
+      const resultado = await pool.query(
+        `
+        INSERT INTO fornecedores (
+          empresa_id,
+          nome,
+          cnpj,
+          telefone,
+          email,
+          ativo
         )
+        VALUES (
+          $1,
+          $2,
+          NULLIF($3, ''),
+          $4,
+          $5,
+          TRUE
+        )
+        RETURNING *
+        `,
+        [
+          req.usuario.empresaId,
+          nome,
+          cnpj,
+          telefone,
+          email,
+        ],
+      )
 
-        if (duplicado) {
-          return res.status(409).json({
-            erro: 'Já existe um fornecedor com esse CNPJ.',
-          })
-        }
+      return res.status(201).json({
+        mensagem:
+          'Fornecedor cadastrado com sucesso.',
+        fornecedor: mapFornecedor(
+          resultado.rows[0],
+        ),
+      })
+    } catch (erro) {
+      if (erro.code === '23505') {
+        return res.status(409).json({
+          erro: 'Já existe um fornecedor com esse CNPJ.',
+        })
       }
 
-      fornecedor.cnpj = cnpj
+      console.error(
+        'Erro ao criar fornecedor:',
+        erro,
+      )
+
+      return res.status(500).json({
+        erro: 'Não foi possível cadastrar o fornecedor.',
+      })
     }
-
-    if (req.body.telefone !== undefined) {
-      fornecedor.telefone = texto(req.body.telefone)
-    }
-
-    if (req.body.email !== undefined) {
-      fornecedor.email = texto(req.body.email).toLowerCase()
-    }
-
-    fornecedor.atualizadoEm = new Date().toISOString()
-
-    return res.status(200).json({
-      mensagem: 'Fornecedor atualizado com sucesso.',
-      fornecedor,
-    })
   },
 )
 
+// EDITAR
+router.patch(
+  '/:id',
+  autenticar,
+  permitirPerfis('admin', 'gerente'),
+  async (req, res) => {
+    try {
+      const atual = await pool.query(
+        `
+        SELECT *
+        FROM fornecedores
+        WHERE id = $1
+          AND empresa_id = $2
+        `,
+        [req.params.id, req.usuario.empresaId],
+      )
+
+      if (!atual.rows[0]) {
+        return res.status(404).json({
+          erro: 'Fornecedor não encontrado.',
+        })
+      }
+
+      const fornecedor = mapFornecedor(
+        atual.rows[0],
+      )
+
+      const nome =
+        req.body.nome === undefined
+          ? fornecedor.nome
+          : texto(req.body.nome)
+
+      const cnpj =
+        req.body.cnpj === undefined
+          ? fornecedor.cnpj
+          : texto(req.body.cnpj)
+
+      const telefone =
+        req.body.telefone === undefined
+          ? fornecedor.telefone
+          : texto(req.body.telefone)
+
+      const email =
+        req.body.email === undefined
+          ? fornecedor.email
+          : texto(req.body.email).toLowerCase()
+
+      const ativo =
+        req.body.ativo === undefined
+          ? fornecedor.ativo
+          : Boolean(req.body.ativo)
+
+      if (!nome) {
+        return res.status(400).json({
+          erro: 'Nome do fornecedor é obrigatório.',
+        })
+      }
+
+      const resultado = await pool.query(
+        `
+        UPDATE fornecedores
+        SET
+          nome = $1,
+          cnpj = NULLIF($2, ''),
+          telefone = $3,
+          email = $4,
+          ativo = $5,
+          atualizado_em = CURRENT_TIMESTAMP
+        WHERE id = $6
+          AND empresa_id = $7
+        RETURNING *
+        `,
+        [
+          nome,
+          cnpj,
+          telefone,
+          email,
+          ativo,
+          req.params.id,
+          req.usuario.empresaId,
+        ],
+      )
+
+      return res.status(200).json({
+        mensagem:
+          'Fornecedor atualizado com sucesso.',
+        fornecedor: mapFornecedor(
+          resultado.rows[0],
+        ),
+      })
+    } catch (erro) {
+      if (erro.code === '23505') {
+        return res.status(409).json({
+          erro: 'Já existe um fornecedor com esse CNPJ.',
+        })
+      }
+
+      console.error(
+        'Erro ao atualizar fornecedor:',
+        erro,
+      )
+
+      return res.status(500).json({
+        erro: 'Não foi possível atualizar o fornecedor.',
+      })
+    }
+  },
+)
+
+// EXCLUIR
 router.delete(
   '/:id',
   autenticar,
   permitirPerfis('admin'),
-  (req, res) => {
-    const id = Number(req.params.id)
+  async (req, res) => {
+    try {
+      const resultado = await pool.query(
+        `
+        DELETE FROM fornecedores
+        WHERE id = $1
+          AND empresa_id = $2
+        RETURNING id
+        `,
+        [req.params.id, req.usuario.empresaId],
+      )
 
-    const indice = fornecedores.findIndex(
-      (item) =>
-        item.id === id &&
-        item.empresaId === req.usuario.empresaId,
-    )
+      if (!resultado.rows[0]) {
+        return res.status(404).json({
+          erro: 'Fornecedor não encontrado.',
+        })
+      }
 
-    if (indice === -1) {
-      return res.status(404).json({
-        erro: 'Fornecedor não encontrado.',
+      return res.status(200).json({
+        mensagem:
+          'Fornecedor excluído com sucesso.',
+      })
+    } catch (erro) {
+      console.error(
+        'Erro ao excluir fornecedor:',
+        erro,
+      )
+
+      return res.status(500).json({
+        erro: 'Não foi possível excluir o fornecedor.',
       })
     }
-
-    fornecedores.splice(indice, 1)
-
-    return res.status(200).json({
-      mensagem: 'Fornecedor excluído com sucesso.',
-    })
   },
 )
 

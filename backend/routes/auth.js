@@ -1,90 +1,141 @@
-const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const express = require('express')
+const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
 
-const router = express.Router();
+const { pool } = require('../database/db')
 
-// USUÁRIO TEMPORÁRIO APENAS PARA TESTE.
-// Quando conectarmos o PostgreSQL, ele será removido
-// e cada empresa terá seus próprios usuários.
-const usuarioTeste = {
-  id: 1,
-  empresaId: 1,
-  nome: 'Administrador',
-  email: 'admin@estacaocloud.local',
-  perfil: 'admin',
-};
+const router = express.Router()
+
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  'estacaocloud-dev-secret-alterar-em-producao'
+
+function gerarToken(usuario) {
+  return jwt.sign(
+    {
+      sub: usuario.id,
+      empresaId: usuario.empresaId,
+      perfil: usuario.perfil,
+      tipo: 'cliente',
+    },
+    JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN || '8h',
+    },
+  )
+}
+
+function respostaLogin(res, usuario, token) {
+  return res.status(200).json({
+    mensagem: 'Login realizado com sucesso.',
+    usuario: {
+      id: usuario.id,
+      empresaId: usuario.empresaId,
+      nome: usuario.nome,
+      email: usuario.email,
+      perfil: usuario.perfil,
+    },
+    token,
+  })
+}
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, senha } = req.body;
+    const email = String(req.body.email || '')
+      .trim()
+      .toLowerCase()
+
+    const senha = String(req.body.senha || '')
 
     if (!email || !senha) {
       return res.status(400).json({
         erro: 'E-mail e senha são obrigatórios.',
-      });
+      })
     }
 
-    const emailNormalizado = String(email).trim().toLowerCase();
+    const resultado = await pool.query(
+      `
+        SELECT
+          u.id,
+          u.empresa_id,
+          u.nome,
+          u.email,
+          u.senha_hash,
+          u.perfil,
+          u.ativo AS usuario_ativo,
+          e.ativa AS empresa_ativa,
+          e.nome AS empresa_nome,
+          e.nome_fantasia AS empresa_nome_fantasia
+        FROM usuarios u
+        INNER JOIN empresas e
+          ON e.id = u.empresa_id
+        WHERE LOWER(u.email) = LOWER($1)
+        LIMIT 1
+      `,
+      [email],
+    )
 
-    if (emailNormalizado !== usuarioTeste.email) {
+    const registro = resultado.rows[0]
+
+    if (!registro) {
       return res.status(401).json({
         erro: 'E-mail ou senha inválidos.',
-      });
+      })
     }
 
-    // Senha temporária somente para teste local.
-    const senhaHashTemporaria = await bcrypt.hash('123456', 10);
+    if (!registro.empresa_ativa) {
+      return res.status(403).json({
+        erro: 'Empresa inativa. Entre em contato com a Estação Group.',
+      })
+    }
+
+    if (!registro.usuario_ativo) {
+      return res.status(403).json({
+        erro: 'Usuário inativo. Procure o administrador.',
+      })
+    }
 
     const senhaValida = await bcrypt.compare(
-      String(senha),
-      senhaHashTemporaria
-    );
+      senha,
+      registro.senha_hash,
+    )
 
     if (!senhaValida) {
       return res.status(401).json({
         erro: 'E-mail ou senha inválidos.',
-      });
+      })
     }
 
-    if (!process.env.JWT_SECRET) {
-      console.error('JWT_SECRET não configurado.');
-
-      return res.status(500).json({
-        erro: 'Configuração de autenticação ausente.',
-      });
+    const usuario = {
+      id: registro.id,
+      empresaId: registro.empresa_id,
+      nome: registro.nome,
+      email: registro.email,
+      perfil: registro.perfil,
     }
 
-    const token = jwt.sign(
-      {
-        sub: usuarioTeste.id,
-        empresaId: usuarioTeste.empresaId,
-        perfil: usuarioTeste.perfil,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: process.env.JWT_EXPIRES_IN || '8h',
-      }
-    );
+    const token = gerarToken(usuario)
 
     return res.status(200).json({
       mensagem: 'Login realizado com sucesso.',
       usuario: {
-        id: usuarioTeste.id,
-        empresaId: usuarioTeste.empresaId,
-        nome: usuarioTeste.nome,
-        email: usuarioTeste.email,
-        perfil: usuarioTeste.perfil,
+        ...usuario,
+        empresa: {
+          id: registro.empresa_id,
+          nome:
+            registro.empresa_nome_fantasia ||
+            registro.empresa_nome,
+        },
       },
       token,
-    });
+    })
   } catch (erro) {
-    console.error('Erro no login:', erro);
+    console.error('Erro no login do EstacaoCloud:', erro)
 
     return res.status(500).json({
       erro: 'Erro interno no login.',
-    });
+    })
   }
-});
+})
 
-module.exports = router;
+module.exports = router

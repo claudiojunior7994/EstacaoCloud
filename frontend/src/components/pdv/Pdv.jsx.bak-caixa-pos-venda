@@ -853,7 +853,10 @@ function Pdv({ usuario, token, onSair }) {
         total: 0,
       })
 
-      await carregarProdutos()
+      await Promise.all([
+        carregarProdutos(),
+        carregarCaixaAtual(),
+      ])
 
       focarCodigo()
     } catch (erro) {

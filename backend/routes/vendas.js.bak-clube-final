@@ -195,7 +195,6 @@ router.post(
 
       // Valida cliente se informado
       let clienteNormalizado = null
-      let clienteClube = false
 
       if (
         clienteId !== undefined &&
@@ -219,7 +218,7 @@ router.post(
         const clienteResultado =
           await client.query(
             `
-            SELECT id, ativo, clube
+            SELECT id, ativo
             FROM clientes
             WHERE id = $1
               AND empresa_id = $2
@@ -247,9 +246,6 @@ router.post(
             erro: 'Cliente está inativo.',
           })
         }
-
-        clienteClube =
-          clienteResultado.rows[0].clube === true
       }
 
       const itensNormalizados = []
@@ -321,26 +317,8 @@ router.post(
           })
         }
 
-        const possuiPrecoClube =
-          clienteClube &&
-          produto.clube_ativo === true &&
-          produto.preco_clube !== null &&
-          produto.preco_clube !== undefined
-
-        const precoUnitario = possuiPrecoClube
-          ? Number(produto.preco_clube)
-          : Number(produto.preco)
-
-        if (
-          !Number.isFinite(precoUnitario) ||
-          precoUnitario < 0
-        ) {
-          await client.query('ROLLBACK')
-
-          return res.status(400).json({
-            erro: `Preço inválido para "${produto.nome}".`,
-          })
-        }
+        const precoUnitario =
+          Number(produto.preco)
 
         itensNormalizados.push({
           produtoId: produto.id,

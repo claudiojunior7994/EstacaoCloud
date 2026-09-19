@@ -443,8 +443,6 @@ function App() {
     categoria: '',
     precoCusto: '',
     precoVenda: '',
-    clubeAtivo: false,
-    precoClube: '',
     estoque: '',
     estoqueMinimo: '',
   }
@@ -480,13 +478,6 @@ function App() {
             ...produto,
             precoCusto: Number(produto.custo || 0),
             precoVenda: Number(produto.preco || 0),
-            clubeAtivo: Boolean(
-              produto.clubeAtivo ?? produto.clube_ativo
-            ),
-            precoClube:
-              produto.precoClube ??
-              produto.preco_clube ??
-              '',
             estoque: Number(produto.estoque || 0),
             estoqueMinimo: Number(produto.estoqueMinimo || 0),
           })),
@@ -506,51 +497,30 @@ function App() {
     email: '',
   }
 
-  const [fornecedores, setFornecedores] = useState([])
+  const [fornecedores, setFornecedores] = useState(() => {
+    try {
+      const fornecedoresSalvos = localStorage.getItem('estacaocloud-fornecedores')
+      return fornecedoresSalvos ? JSON.parse(fornecedoresSalvos) : []
+    } catch {
+      return []
+    }
+  })
   const [buscaFornecedor, setBuscaFornecedor] = useState('')
   const [fornecedorEmEdicao, setFornecedorEmEdicao] = useState(null)
   const [mostrarFormularioFornecedor, setMostrarFormularioFornecedor] =
     useState(false)
   const [novoFornecedor, setNovoFornecedor] = useState(fornecedorVazio)
 
-  async function carregarFornecedores() {
-    if (!token) {
-      setFornecedores([])
-      return
-    }
-
+  useEffect(() => {
     try {
-      const resposta = await fetch(
-        'http://localhost:3000/api/fornecedores',
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      )
-
-      const dados = await resposta.json()
-
-      if (!resposta.ok) {
-        console.error('Erro ao carregar fornecedores:', dados.erro)
-        return
-      }
-
-      setFornecedores(
-        Array.isArray(dados)
-          ? dados
-          : Array.isArray(dados.fornecedores)
-            ? dados.fornecedores
-            : [],
+      localStorage.setItem(
+        'estacaocloud-fornecedores',
+        JSON.stringify(fornecedores),
       )
     } catch (erro) {
-      console.error('Erro ao carregar fornecedores:', erro)
+      console.error('Erro ao salvar fornecedores:', erro)
     }
-  }
-
-  useEffect(() => {
-    carregarFornecedores()
-  }, [token])
+  }, [fornecedores])
 
 
   const clienteVazio = {
@@ -563,51 +533,26 @@ function App() {
     ativo: true,
   }
 
-  const [clientes, setClientes] = useState([])
+  const [clientes, setClientes] = useState(() => {
+    try {
+      const clientesSalvos = localStorage.getItem('estacaocloud-clientes')
+      return clientesSalvos ? JSON.parse(clientesSalvos) : []
+    } catch {
+      return []
+    }
+  })
   const [buscaCliente, setBuscaCliente] = useState('')
   const [clienteEmEdicao, setClienteEmEdicao] = useState(null)
   const [mostrarFormularioCliente, setMostrarFormularioCliente] = useState(false)
   const [novoCliente, setNovoCliente] = useState(clienteVazio)
 
-  async function carregarClientes() {
-    if (!token) {
-      setClientes([])
-      return
-    }
-
-    try {
-      const resposta = await fetch(
-        'http://localhost:3000/api/clientes',
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      )
-
-      const dados = await resposta.json()
-
-      if (!resposta.ok) {
-        console.error('Erro ao carregar clientes:', dados.erro)
-        return
-      }
-
-      setClientes(
-        Array.isArray(dados)
-          ? dados
-          : Array.isArray(dados.clientes)
-            ? dados.clientes
-            : [],
-      )
-    } catch (erro) {
-      console.error('Erro ao carregar clientes:', erro)
-    }
-  }
-
   useEffect(() => {
-    carregarClientes()
-  }, [token])
-
+    try {
+      localStorage.setItem('estacaocloud-clientes', JSON.stringify(clientes))
+    } catch (erro) {
+      console.error('Erro ao salvar clientes:', erro)
+    }
+  }, [clientes])
 
   useEffect(() => {
     async function carregarVendas() {
@@ -810,13 +755,6 @@ function App() {
             ...produto,
             precoCusto: Number(produto.custo || 0),
             precoVenda: Number(produto.preco || 0),
-            clubeAtivo: Boolean(
-              produto.clubeAtivo ?? produto.clube_ativo
-            ),
-            precoClube:
-              produto.precoClube ??
-              produto.preco_clube ??
-              '',
             estoque: Number(produto.estoque || 0),
             estoqueMinimo: Number(produto.estoqueMinimo || 0),
           })),
@@ -897,11 +835,11 @@ function App() {
   }
 
   function alterarCampoProduto(evento) {
-    const { name, value, type, checked } = evento.target
+    const { name, value } = evento.target
 
     setNovoProduto((produtoAtual) => ({
       ...produtoAtual,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: value,
     }))
   }
 
@@ -917,28 +855,12 @@ function App() {
       return
     }
 
-    if (
-      novoProduto.clubeAtivo &&
-      (
-        novoProduto.precoClube === '' ||
-        !Number.isFinite(Number(novoProduto.precoClube)) ||
-        Number(novoProduto.precoClube) < 0
-      )
-    ) {
-      alert('Informe um preço válido para o Clube Estação.')
-      return
-    }
-
     const payload = {
       codigoBarras: novoProduto.codigoBarras.trim(),
       nome: novoProduto.nome.trim(),
       categoria: novoProduto.categoria.trim(),
       custo: Number(novoProduto.precoCusto || 0),
       preco: Number(novoProduto.precoVenda || 0),
-      clubeAtivo: Boolean(novoProduto.clubeAtivo),
-      precoClube: novoProduto.clubeAtivo
-        ? Number(novoProduto.precoClube)
-        : null,
       estoque: Number(novoProduto.estoque || 0),
       estoqueMinimo: Number(novoProduto.estoqueMinimo || 0),
     }
@@ -968,14 +890,6 @@ function App() {
         ...dados.produto,
         precoCusto: Number(dados.produto.custo || 0),
         precoVenda: Number(dados.produto.preco || 0),
-        clubeAtivo: Boolean(
-          dados.produto.clubeAtivo ??
-          dados.produto.clube_ativo
-        ),
-        precoClube:
-          dados.produto.precoClube ??
-          dados.produto.preco_clube ??
-          '',
         estoque: Number(dados.produto.estoque || 0),
         estoqueMinimo: Number(dados.produto.estoqueMinimo || 0),
       }
@@ -1010,14 +924,6 @@ function App() {
       categoria: produto.categoria || '',
       precoCusto: String(produto.precoCusto ?? produto.custo ?? ''),
       precoVenda: String(produto.precoVenda ?? produto.preco ?? ''),
-      clubeAtivo: Boolean(
-        produto.clubeAtivo ?? produto.clube_ativo
-      ),
-      precoClube: String(
-        produto.precoClube ??
-        produto.preco_clube ??
-        ''
-      ),
       estoque: String(produto.estoque ?? ''),
       estoqueMinimo: String(produto.estoqueMinimo ?? ''),
     })
@@ -1083,7 +989,7 @@ function App() {
     }))
   }
 
-  async function salvarFornecedor(evento) {
+  function salvarFornecedor(evento) {
     evento.preventDefault()
 
     if (!novoFornecedor.nome.trim()) {
@@ -1091,40 +997,29 @@ function App() {
       return
     }
 
-    const payload = {
+    const dadosFornecedor = {
       nome: novoFornecedor.nome.trim(),
       cnpj: novoFornecedor.cnpj.trim(),
       telefone: novoFornecedor.telefone.trim(),
       email: novoFornecedor.email.trim(),
     }
 
-    try {
-      const url = fornecedorEmEdicao
-        ? `http://localhost:3000/api/fornecedores/${fornecedorEmEdicao.id}`
-        : 'http://localhost:3000/api/fornecedores'
-
-      const resposta = await fetch(url, {
-        method: fornecedorEmEdicao ? 'PATCH' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      })
-
-      const dados = await resposta.json()
-
-      if (!resposta.ok) {
-        alert(dados.erro || 'Não foi possível salvar o fornecedor.')
-        return
-      }
-
-      await carregarFornecedores()
-      fecharCadastroFornecedor()
-    } catch (erro) {
-      console.error('Erro ao salvar fornecedor:', erro)
-      alert('Não foi possível conectar ao servidor.')
+    if (fornecedorEmEdicao) {
+      setFornecedores((listaAtual) =>
+        listaAtual.map((fornecedor) =>
+          fornecedor.id === fornecedorEmEdicao.id
+            ? { ...fornecedor, ...dadosFornecedor }
+            : fornecedor,
+        ),
+      )
+    } else {
+      setFornecedores((listaAtual) => [
+        ...listaAtual,
+        { id: Date.now(), ...dadosFornecedor },
+      ])
     }
+
+    fecharCadastroFornecedor()
   }
 
   function editarFornecedor(fornecedor) {
@@ -1138,42 +1033,21 @@ function App() {
     setMostrarFormularioFornecedor(true)
   }
 
-  async function excluirFornecedor(fornecedor) {
+  function excluirFornecedor(fornecedor) {
     const confirmou = window.confirm(
       `Deseja realmente excluir o fornecedor "${fornecedor.nome}"?`,
     )
 
     if (!confirmou) return
 
-    try {
-      const resposta = await fetch(
-        `http://localhost:3000/api/fornecedores/${fornecedor.id}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      )
+    setFornecedores((listaAtual) =>
+      listaAtual.filter((item) => item.id !== fornecedor.id),
+    )
 
-      const dados = await resposta.json()
-
-      if (!resposta.ok) {
-        alert(dados.erro || 'Não foi possível excluir o fornecedor.')
-        return
-      }
-
-      await carregarFornecedores()
-
-      if (fornecedorEmEdicao?.id === fornecedor.id) {
-        fecharCadastroFornecedor()
-      }
-    } catch (erro) {
-      console.error('Erro ao excluir fornecedor:', erro)
-      alert('Não foi possível conectar ao servidor.')
+    if (fornecedorEmEdicao?.id === fornecedor.id) {
+      fecharCadastroFornecedor()
     }
   }
-
 
   function abrirCadastroCliente() {
     setPagina('clientes')
@@ -1197,55 +1071,44 @@ function App() {
     }))
   }
 
-  async function salvarCliente(evento) {
+  function salvarCliente(evento) {
     evento.preventDefault()
 
-    if (
-      !novoCliente.nome.trim() ||
-      !novoCliente.cpfCnpj.trim() ||
-      !novoCliente.telefone.trim()
-    ) {
-      alert('Preencha nome, CPF/CNPJ e telefone.')
+    if (!novoCliente.nome.trim()) {
+      alert('Preencha pelo menos o nome do cliente.')
       return
     }
 
-    const payload = {
+    const dadosCliente = {
       nome: novoCliente.nome.trim(),
       cpfCnpj: novoCliente.cpfCnpj.trim(),
       telefone: novoCliente.telefone.trim(),
       email: novoCliente.email.trim(),
-      nascimento: novoCliente.nascimento || null,
+      nascimento: novoCliente.nascimento,
       clube: Boolean(novoCliente.clube),
       ativo: Boolean(novoCliente.ativo),
     }
 
-    try {
-      const url = clienteEmEdicao
-        ? `http://localhost:3000/api/clientes/${clienteEmEdicao.id}`
-        : 'http://localhost:3000/api/clientes'
-
-      const resposta = await fetch(url, {
-        method: clienteEmEdicao ? 'PATCH' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+    if (clienteEmEdicao) {
+      setClientes((listaAtual) =>
+        listaAtual.map((cliente) =>
+          cliente.id === clienteEmEdicao.id
+            ? { ...cliente, ...dadosCliente }
+            : cliente,
+        ),
+      )
+    } else {
+      setClientes((listaAtual) => [
+        ...listaAtual,
+        {
+          id: Date.now(),
+          criadoEm: new Date().toISOString(),
+          ...dadosCliente,
         },
-        body: JSON.stringify(payload),
-      })
-
-      const dados = await resposta.json()
-
-      if (!resposta.ok) {
-        alert(dados.erro || 'Não foi possível salvar o cliente.')
-        return
-      }
-
-      await carregarClientes()
-      fecharCadastroCliente()
-    } catch (erro) {
-      console.error('Erro ao salvar cliente:', erro)
-      alert('Não foi possível conectar ao servidor.')
+      ])
     }
+
+    fecharCadastroCliente()
   }
 
   function editarCliente(cliente) {
@@ -1262,42 +1125,21 @@ function App() {
     setMostrarFormularioCliente(true)
   }
 
-  async function excluirCliente(cliente) {
+  function excluirCliente(cliente) {
     const confirmou = window.confirm(
       `Deseja realmente excluir o cliente "${cliente.nome}"?`,
     )
 
     if (!confirmou) return
 
-    try {
-      const resposta = await fetch(
-        `http://localhost:3000/api/clientes/${cliente.id}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      )
+    setClientes((listaAtual) =>
+      listaAtual.filter((item) => item.id !== cliente.id),
+    )
 
-      const dados = await resposta.json()
-
-      if (!resposta.ok) {
-        alert(dados.erro || 'Não foi possível excluir o cliente.')
-        return
-      }
-
-      await carregarClientes()
-
-      if (clienteEmEdicao?.id === cliente.id) {
-        fecharCadastroCliente()
-      }
-    } catch (erro) {
-      console.error('Erro ao excluir cliente:', erro)
-      alert('Não foi possível conectar ao servidor.')
+    if (clienteEmEdicao?.id === cliente.id) {
+      fecharCadastroCliente()
     }
   }
-
 
   function formatarMoeda(valor) {
     return Number(valor || 0).toLocaleString('pt-BR', {
@@ -1496,41 +1338,6 @@ function App() {
               placeholder="0,00"
               value={novoProduto.precoVenda}
               onChange={alterarCampoProduto}
-            />
-          </div>
-
-          <div className="form-group">
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                marginTop: '24px',
-              }}
-            >
-              <input
-                name="clubeAtivo"
-                type="checkbox"
-                checked={Boolean(novoProduto.clubeAtivo)}
-                onChange={alterarCampoProduto}
-              />
-              Produto participa do Clube Estação
-            </label>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="precoClube">Preço Clube</label>
-            <input
-              id="precoClube"
-              name="precoClube"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0,00"
-              value={novoProduto.precoClube}
-              onChange={alterarCampoProduto}
-              disabled={!novoProduto.clubeAtivo}
             />
           </div>
 

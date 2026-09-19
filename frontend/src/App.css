@@ -139,7 +139,8 @@ button {
   flex: 1;
   min-width: 0;
   padding: 22px 28px 36px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .topbar {

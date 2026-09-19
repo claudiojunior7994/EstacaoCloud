@@ -1,65 +1,420 @@
-const express = require('express');
+const express = require('express')
+const bcrypt = require('bcryptjs')
 
-const autenticar = require('../middleware/auth');
-const permitirPerfis = require('../middleware/permissao');
+const { pool } = require('../database/db')
+const autenticar = require('../middleware/auth')
+const permitirPerfis = require('../middleware/permissao')
 
-const router = express.Router();
+const router = express.Router()
 
-// Lista os usuários da empresa logada.
-// Depois os dados virão do PostgreSQL.
+const perfisPermitidos = [
+  'admin',
+  'gerente',
+  'operador',
+]
+
+function normalizarEmail(valor) {
+  return String(valor || '')
+    .trim()
+    .toLowerCase()
+}
+
+function mapUsuario(r) {
+  return {
+    id: r.id,
+    empresaId: r.empresa_id,
+    nome: r.nome,
+    email: r.email,
+    perfil: r.perfil,
+    ativo: r.ativo,
+    criadoEm: r.criado_em,
+    atualizadoEm: r.atualizado_em,
+  }
+}
+
+// LISTAR
 router.get(
   '/',
   autenticar,
   permitirPerfis('admin', 'gerente'),
-  (req, res) => {
-    return res.status(200).json({
-      empresaId: req.usuario.empresaId,
-      usuarios: [],
-    });
-  }
-);
+  async (req, res) => {
+    try {
+      const resultado = await pool.query(
+        `
+        SELECT
+          id,
+          empresa_id,
+          nome,
+          email,
+          perfil,
+          ativo,
+          criado_em,
+          atualizado_em
+        FROM usuarios
+        WHERE empresa_id = $1
+        ORDER BY nome
+        `,
+        [req.usuario.empresaId],
+      )
 
-// Criação de usuários.
-// Somente administrador poderá criar novos acessos.
+      return res.status(200).json({
+        empresaId: req.usuario.empresaId,
+        usuarios:
+          resultado.rows.map(mapUsuario),
+      })
+    } catch (erro) {
+      console.error(
+        'Erro ao listar usuários:',
+        erro,
+      )
+
+      return res.status(500).json({
+        erro: 'Não foi possível carregar os usuários.',
+      })
+    }
+  },
+)
+
+// CRIAR
 router.post(
   '/',
   autenticar,
   permitirPerfis('admin'),
-  (req, res) => {
-    const { nome, email, senha, perfil } = req.body;
+  async (req, res) => {
+    try {
+      const nome = String(
+        req.body.nome || '',
+      ).trim()
 
-    if (!nome || !email || !senha || !perfil) {
-      return res.status(400).json({
-        erro: 'Nome, e-mail, senha e perfil são obrigatórios.',
-      });
+      const email = normalizarEmail(
+        req.body.email,
+      )
+
+      const senha = String(
+        req.body.senha || '',
+      )
+
+      const perfil = req.body.perfil
+
+      if (!nome || !email || !senha || !perfil) {
+        return res.status(400).json({
+          erro: 'Nome, e-mail, senha e perfil são obrigatórios.',
+        })
+      }
+
+      if (!perfisPermitidos.includes(perfil)) {
+        return res.status(400).json({
+          erro: 'Perfil de usuário inválido.',
+        })
+      }
+
+      if (senha.length < 6) {
+        return res.status(400).json({
+          erro: 'A senha deve ter pelo menos 6 caracteres.',
+        })
+      }
+
+      const senhaHash = await bcrypt.hash(
+        senha,
+        10,
+      )
+
+      const resultado = await pool.query(
+        `
+        INSERT INTO usuarios (
+          empresa_id,
+          nome,
+          email,
+          senha_hash,
+          perfil,
+          ativo
+        )
+        VALUES (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          TRUE
+        )
+        RETURNING
+          id,
+          empresa_id,
+          nome,
+          email,
+          perfil,
+          ativo,
+          criado_em,
+          atualizado_em
+        `,
+        [
+          req.usuario.empresaId,
+          nome,
+          email,
+          senhaHash,
+          perfil,
+        ],
+      )
+
+      return res.status(201).json({
+        mensagem:
+          'Usuário criado com sucesso.',
+        usuario: mapUsuario(resultado.rows[0]),
+      })
+    } catch (erro) {
+      if (erro.code === '23505') {
+        return res.status(409).json({
+          erro: 'Já existe um usuário com este e-mail nesta empresa.',
+        })
+      }
+
+      console.error('Erro ao criar usuário:', erro)
+
+      return res.status(500).json({
+        erro: 'Não foi possível criar o usuário.',
+      })
     }
+  },
+)
 
-    const perfisPermitidos = [
-      'admin',
-      'gerente',
-      'operador',
-    ];
+// EDITAR
+router.patch(
+  '/:id',
+  autenticar,
+  permitirPerfis('admin'),
+  async (req, res) => {
+    try {
+      const atual = await pool.query(
+        `
+        SELECT *
+        FROM usuarios
+        WHERE id = $1
+          AND empresa_id = $2
+        `,
+        [req.params.id, req.usuario.empresaId],
+      )
 
-    if (!perfisPermitidos.includes(perfil)) {
-      return res.status(400).json({
-        erro: 'Perfil de usuário inválido.',
-      });
+      if (!atual.rows[0]) {
+        return res.status(404).json({
+          erro: 'Usuário não encontrado.',
+        })
+      }
+
+      const usuario = atual.rows[0]
+
+      const nome =
+        req.body.nome === undefined
+          ? usuario.nome
+          : String(req.body.nome).trim()
+
+      const email =
+        req.body.email === undefined
+          ? usuario.email
+          : normalizarEmail(req.body.email)
+
+      const perfil =
+        req.body.perfil === undefined
+          ? usuario.perfil
+          : req.body.perfil
+
+      if (!nome || !email) {
+        return res.status(400).json({
+          erro: 'Nome e e-mail são obrigatórios.',
+        })
+      }
+
+      if (!perfisPermitidos.includes(perfil)) {
+        return res.status(400).json({
+          erro: 'Perfil de usuário inválido.',
+        })
+      }
+
+      const resultado = await pool.query(
+        `
+        UPDATE usuarios
+        SET
+          nome = $1,
+          email = $2,
+          perfil = $3,
+          atualizado_em = CURRENT_TIMESTAMP
+        WHERE id = $4
+          AND empresa_id = $5
+        RETURNING
+          id,
+          empresa_id,
+          nome,
+          email,
+          perfil,
+          ativo,
+          criado_em,
+          atualizado_em
+        `,
+        [
+          nome,
+          email,
+          perfil,
+          req.params.id,
+          req.usuario.empresaId,
+        ],
+      )
+
+      return res.status(200).json({
+        mensagem:
+          'Usuário atualizado com sucesso.',
+        usuario: mapUsuario(resultado.rows[0]),
+      })
+    } catch (erro) {
+      if (erro.code === '23505') {
+        return res.status(409).json({
+          erro: 'Já existe um usuário com este e-mail nesta empresa.',
+        })
+      }
+
+      console.error(
+        'Erro ao atualizar usuário:',
+        erro,
+      )
+
+      return res.status(500).json({
+        erro: 'Não foi possível atualizar o usuário.',
+      })
     }
+  },
+)
 
-    // Nunca retornamos a senha na resposta.
-    // Depois ela será convertida em hash com bcrypt
-    // antes de ser salva no PostgreSQL.
-    return res.status(201).json({
-      mensagem: 'Usuário validado com sucesso.',
-      usuario: {
-        empresaId: req.usuario.empresaId,
-        nome: String(nome).trim(),
-        email: String(email).trim().toLowerCase(),
-        perfil,
-        ativo: true,
-      },
-    });
-  }
-);
+// ATIVAR / INATIVAR
+router.patch(
+  '/:id/status',
+  autenticar,
+  permitirPerfis('admin'),
+  async (req, res) => {
+    try {
+      if (typeof req.body.ativo !== 'boolean') {
+        return res.status(400).json({
+          erro: 'Informe o status ativo como verdadeiro ou falso.',
+        })
+      }
 
-module.exports = router;
+      if (
+        Number(req.params.id) ===
+          Number(req.usuario.id) &&
+        req.body.ativo === false
+      ) {
+        return res.status(400).json({
+          erro: 'Você não pode inativar o próprio usuário.',
+        })
+      }
+
+      const resultado = await pool.query(
+        `
+        UPDATE usuarios
+        SET
+          ativo = $1,
+          atualizado_em = CURRENT_TIMESTAMP
+        WHERE id = $2
+          AND empresa_id = $3
+        RETURNING
+          id,
+          empresa_id,
+          nome,
+          email,
+          perfil,
+          ativo,
+          criado_em,
+          atualizado_em
+        `,
+        [
+          req.body.ativo,
+          req.params.id,
+          req.usuario.empresaId,
+        ],
+      )
+
+      if (!resultado.rows[0]) {
+        return res.status(404).json({
+          erro: 'Usuário não encontrado.',
+        })
+      }
+
+      return res.status(200).json({
+        mensagem: req.body.ativo
+          ? 'Usuário ativado com sucesso.'
+          : 'Usuário inativado com sucesso.',
+        usuario: mapUsuario(resultado.rows[0]),
+      })
+    } catch (erro) {
+      console.error(
+        'Erro ao alterar status do usuário:',
+        erro,
+      )
+
+      return res.status(500).json({
+        erro: 'Não foi possível alterar o usuário.',
+      })
+    }
+  },
+)
+
+// REDEFINIR SENHA
+router.patch(
+  '/:id/senha',
+  autenticar,
+  permitirPerfis('admin'),
+  async (req, res) => {
+    try {
+      const novaSenha = String(
+        req.body.senha || '',
+      )
+
+      if (novaSenha.length < 6) {
+        return res.status(400).json({
+          erro: 'A nova senha deve ter pelo menos 6 caracteres.',
+        })
+      }
+
+      const senhaHash = await bcrypt.hash(
+        novaSenha,
+        10,
+      )
+
+      const resultado = await pool.query(
+        `
+        UPDATE usuarios
+        SET
+          senha_hash = $1,
+          atualizado_em = CURRENT_TIMESTAMP
+        WHERE id = $2
+          AND empresa_id = $3
+        RETURNING id
+        `,
+        [
+          senhaHash,
+          req.params.id,
+          req.usuario.empresaId,
+        ],
+      )
+
+      if (!resultado.rows[0]) {
+        return res.status(404).json({
+          erro: 'Usuário não encontrado.',
+        })
+      }
+
+      return res.status(200).json({
+        mensagem:
+          'Senha redefinida com sucesso.',
+      })
+    } catch (erro) {
+      console.error(
+        'Erro ao redefinir senha:',
+        erro,
+      )
+
+      return res.status(500).json({
+        erro: 'Não foi possível redefinir a senha.',
+      })
+    }
+  },
+)
+
+module.exports = router
