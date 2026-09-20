@@ -517,52 +517,37 @@ function Pdv({ usuario, token, onSair }) {
       return
     }
 
-    let listaProdutos = produtos
-
-    if (listaProdutos.length === 0) {
-      try {
-        const resposta = await fetch(`${API_URL}/api/produtos`, {
+    try {
+      const resposta = await fetch(
+        `${API_URL}/api/produtos/buscar/codigo/${encodeURIComponent(codigoLimpo)}`,
+        {
           headers: {
             Authorization: `Bearer ${tokenAcesso}`,
           },
-        })
+        },
+      )
 
-        const dados = await resposta.json()
+      const dados = await resposta.json()
 
-        if (!resposta.ok) {
-          throw new Error(
-            dados.erro || 'Erro ao consultar produtos.',
-          )
-        }
-
-        listaProdutos = Array.isArray(dados.produtos)
-          ? dados.produtos
-          : []
-
-        setProdutos(listaProdutos)
-      } catch (erro) {
-        alert(erro.message)
-        focarCodigo()
-        return
+      if (!resposta.ok) {
+        throw new Error(
+          dados.erro || 'Produto não encontrado.',
+        )
       }
-    }
 
-    const produto = listaProdutos.find(
-      (item) =>
-        String(item.codigoBarras || '').trim() === codigoLimpo,
-    )
+      if (!dados.produto) {
+        throw new Error('Produto não encontrado.')
+      }
 
-    if (!produto) {
+      adicionarProduto(dados.produto)
+    } catch (erro) {
       alert(
-        `Produto não encontrado.\n\nCódigo: ${codigoLimpo}`,
+        `${erro.message}\n\nCódigo / PLU: ${codigoLimpo}`,
       )
 
       setCodigo('')
       focarCodigo()
-      return
     }
-
-    adicionarProduto(produto)
   }
 
   async function tratarCodigo(evento) {
