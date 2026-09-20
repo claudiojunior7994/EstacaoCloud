@@ -122,3 +122,126 @@
     border: 1px solid #000;
   }
 }
+
+/* =========================================================
+   ETIQUETA DE GONDOLA - FORMATO HORIZONTAL
+   ========================================================= */
+
+.etiqueta-card {
+  width: 9cm;
+  min-height: 4cm;
+  box-sizing: border-box;
+  padding: 0.35cm 0.45cm;
+  border: 1.5px solid #111;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.etiqueta-card strong {
+  font-size: 16px;
+  line-height: 1.1;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.etiqueta-preco {
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 900;
+  margin: 5px 0;
+}
+
+.etiqueta-clube {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.etiqueta-codigo,
+.etiqueta-unidade {
+  font-size: 10px;
+}
+
+@media print {
+  @page {
+    margin: 5mm;
+  }
+
+  .etiqueta-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 9cm);
+    gap: 4mm;
+    align-items: start;
+    justify-content: start;
+  }
+
+  .etiqueta-card {
+    width: 9cm !important;
+    height: 4cm !important;
+    min-height: 4cm !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+
+/* AJUSTE FINAL - ETIQUETA MAIS HORIZONTAL */
+.etiqueta-card {
+  width: 11cm;
+  height: 3.2cm;
+  min-height: 3.2cm;
+  padding: 0.2cm 0.45cm;
+}
+
+@media print {
+  .etiqueta-grid {
+    grid-template-columns: 11cm;
+    gap: 3mm;
+  }
+
+  .etiqueta-card {
+    width: 11cm !important;
+    height: 3.2cm !important;
+    min-height: 3.2cm !important;
+  }
+}
+
+/* LARGURA FINAL DA ETIQUETA */
+.etiqueta-card {
+  width: 13cm;
+}
+
+@media print {
+  .etiqueta-grid {
+    grid-template-columns: 13cm;
+  }
+
+  .etiqueta-card {
+    width: 13cm !important;
+  }
+}
+
+/* VISUAL FINAL - ETIQUETA AMARELA */
+.etiqueta-card {
+  background: #ffd800 !important;
+  color: #000 !important;
+  border: 2px solid #000 !important;
+}
+
+.etiqueta-card strong,
+.etiqueta-preco,
+.etiqueta-clube,
+.etiqueta-codigo,
+.etiqueta-unidade {
+  color: #000 !important;
+}
+
+@media print {
+  .etiqueta-card {
+    background: #ffd800 !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

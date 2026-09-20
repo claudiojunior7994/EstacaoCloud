@@ -3974,8 +3974,8 @@ function App() {
             </p>
 
             <h2>
-              {paginas[pagina].icone}{' '}
-              {paginas[pagina].titulo}
+              {paginas[pagina]?.icone}{' '}
+              {paginas[pagina]?.titulo}
             </h2>
           </div>
 
