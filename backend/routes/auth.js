@@ -6,9 +6,13 @@ const { pool } = require('../database/db')
 
 const router = express.Router()
 
-const JWT_SECRET =
-  process.env.JWT_SECRET ||
-  'estacaocloud-dev-secret-alterar-em-producao'
+const JWT_SECRET = process.env.JWT_SECRET
+
+if (!JWT_SECRET) {
+  throw new Error(
+    'JWT_SECRET não configurado. Defina a variável no arquivo .env.'
+  )
+}
 
 function gerarToken(usuario) {
   return jwt.sign(

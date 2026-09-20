@@ -26,6 +26,35 @@ const permitirPerfis = require('./middleware/permissao')
 
 const { testarConexao } = require('./database/db')
 
+
+const tentativasLogin = new Map()
+
+function limitarLogin(req, res, next) {
+  const chave = req.ip
+  const agora = Date.now()
+  const janela = 15 * 60 * 1000
+  const limite = 20
+
+  let registro = tentativasLogin.get(chave)
+
+  if (!registro || agora - registro.inicio > janela) {
+    registro = {
+      inicio: agora,
+      tentativas: 0,
+    }
+  }
+
+  registro.tentativas += 1
+  tentativasLogin.set(chave, registro)
+
+  if (registro.tentativas > limite) {
+    return res.status(429).json({
+      erro: 'Muitas tentativas de login. Aguarde alguns minutos.',
+    })
+  }
+
+  next()
+}
 const app = express()
 
 const PORT = Number(process.env.PORT) || 3000
@@ -72,6 +101,7 @@ app.get('/api/health', (req, res) => {
 // ESTAÇÃOCLOUD - CLIENTES
 // =====================================================
 
+app.use('/api/auth/login', limitarLogin)
 app.use('/api/auth', authRoutes)
 app.use('/api/empresas', empresasRoutes)
 app.use('/api/usuarios', usuariosRoutes)
