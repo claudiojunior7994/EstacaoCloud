@@ -470,6 +470,53 @@ router.post(
             req.usuario.empresaId,
           ],
         )
+
+        const estoqueDepoisVenda = await client.query(
+          `
+          SELECT estoque
+          FROM produtos
+          WHERE id = $1
+            AND empresa_id = $2
+          `,
+          [
+            item.produtoId,
+            req.usuario.empresaId,
+          ],
+        )
+
+        const estoquePosteriorVenda =
+          Number(estoqueDepoisVenda.rows[0].estoque)
+
+        const estoqueAnteriorVenda =
+          estoquePosteriorVenda + Number(item.quantidade)
+
+        await client.query(
+          `
+          INSERT INTO movimentacoes_estoque
+          (
+            empresa_id,
+            produto_id,
+            usuario_id,
+            tipo,
+            quantidade,
+            estoque_anterior,
+            estoque_posterior,
+            referencia,
+            observacao
+          )
+          VALUES ($1,$2,$3,'saida',$4,$5,$6,$7,$8)
+          `,
+          [
+            req.usuario.empresaId,
+            item.produtoId,
+            req.usuario.id,
+            Number(item.quantidade),
+            estoqueAnteriorVenda,
+            estoquePosteriorVenda,
+            'VENDA #' + venda.id,
+            'Baixa automática de estoque pela venda',
+          ],
+        )
       }
 
       // Atualiza caixa
@@ -660,6 +707,57 @@ router.patch(
             Number(item.quantidade),
             item.produto_id,
             req.usuario.empresaId,
+          ],
+        )
+
+        const estoqueDepoisCancelamento =
+          await client.query(
+            `
+            SELECT estoque
+            FROM produtos
+            WHERE id = $1
+              AND empresa_id = $2
+            `,
+            [
+              item.produto_id,
+              req.usuario.empresaId,
+            ],
+          )
+
+        const estoquePosteriorCancelamento =
+          Number(
+            estoqueDepoisCancelamento.rows[0].estoque,
+          )
+
+        const estoqueAnteriorCancelamento =
+          estoquePosteriorCancelamento -
+          Number(item.quantidade)
+
+        await client.query(
+          `
+          INSERT INTO movimentacoes_estoque
+          (
+            empresa_id,
+            produto_id,
+            usuario_id,
+            tipo,
+            quantidade,
+            estoque_anterior,
+            estoque_posterior,
+            referencia,
+            observacao
+          )
+          VALUES ($1,$2,$3,'entrada',$4,$5,$6,$7,$8)
+          `,
+          [
+            req.usuario.empresaId,
+            item.produto_id,
+            req.usuario.id,
+            Number(item.quantidade),
+            estoqueAnteriorCancelamento,
+            estoquePosteriorCancelamento,
+            'CANCELAMENTO VENDA #' + venda.id,
+            'Estorno automático de estoque por cancelamento da venda',
           ],
         )
       }
