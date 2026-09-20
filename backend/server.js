@@ -13,6 +13,9 @@ const fornecedoresRoutes = require('./routes/fornecedores')
 const clientesRoutes = require('./routes/clientes')
 const vendasRoutes = require('./routes/vendas')
 const caixaRoutes = require('./data/caixa')
+const estoqueRoutes = require('./routes/estoque')
+const inventariosRoutes = require('./routes/inventarios')
+const etiquetasRoutes = require('./routes/etiquetas')
 
 // Administração Estação Group
 const plataformaAuthRoutes = require('./routes/plataformaAuth')
@@ -78,6 +81,9 @@ app.use('/api/fornecedores', fornecedoresRoutes)
 app.use('/api/clientes', clientesRoutes)
 app.use('/api/vendas', vendasRoutes)
 app.use('/api/caixa', caixaRoutes)
+app.use('/api/estoque', estoqueRoutes)
+app.use('/api/inventarios', inventariosRoutes)
+app.use('/api/etiquetas', etiquetasRoutes)
 
 // =====================================================
 // ESTAÇÃO GROUP - ADMINISTRAÇÃO

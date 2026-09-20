@@ -1,53 +1,128 @@
-const express = require('express');
 
-const autenticar = require('../middleware/auth');
-const permitirPerfis = require('../middleware/permissao');
+const express = require('express')
+const { pool } = require('../database/db')
+const autenticar = require('../middleware/auth')
+const permitirPerfis = require('../middleware/permissao')
 
-const router = express.Router();
+const router = express.Router()
 
-// Rota temporária.
-// Depois buscará os dados reais da empresa no PostgreSQL.
-router.get(
-  '/minha-empresa',
+function texto(v) {
+  return String(v == null ? '' : v).trim()
+}
+
+router.get('/minha-empresa',
   autenticar,
-  (req, res) => {
-    return res.status(200).json({
-      empresa: {
-        id: req.usuario.empresaId,
-        nome: 'Empresa de teste',
-        ativa: true,
-      },
-    });
-  }
-);
+  async (req,res) => {
+    try {
+      const r = await pool.query(`
+        SELECT
+          id, nome, nome_fantasia, cnpj, email, telefone,
+          endereco, cidade, estado, cep, inscricao_estadual,
+          mensagem_comprovante, permite_estoque_negativo, ativa
+        FROM empresas
+        WHERE id=$1
+      `, [req.usuario.empresaId])
 
-// Rota reservada para administradores.
-// Depois será usada para editar os dados da empresa.
-router.patch(
-  '/minha-empresa',
+      if (!r.rows[0]) {
+        return res.status(404).json({ erro: 'Empresa não encontrada.' })
+      }
+
+      res.json({ empresa: r.rows[0] })
+    } catch (erro) {
+      console.error(erro)
+      res.status(500).json({ erro: 'Erro ao carregar empresa.' })
+    }
+  }
+)
+
+router.patch('/minha-empresa',
   autenticar,
   permitirPerfis('admin'),
-  (req, res) => {
-    const {
-      nome,
-      nomeFantasia,
-      cnpj,
-      email,
-      telefone,
-    } = req.body;
+  async (req,res) => {
+    try {
+      const atual = await pool.query(
+        'SELECT * FROM empresas WHERE id=$1',
+        [req.usuario.empresaId]
+      )
 
-    return res.status(200).json({
-      mensagem: 'Dados da empresa validados com sucesso.',
-      empresa: {
-        id: req.usuario.empresaId,
-        nome: nome || null,
-        nomeFantasia: nomeFantasia || null,
-        cnpj: cnpj || null,
-        email: email || null,
-        telefone: telefone || null,
-      },
-    });
+      if (!atual.rows[0]) {
+        return res.status(404).json({ erro: 'Empresa não encontrada.' })
+      }
+
+      const e = atual.rows[0]
+
+      const dados = {
+        nome: req.body.nome === undefined ? e.nome : texto(req.body.nome),
+        nomeFantasia: req.body.nomeFantasia === undefined ? e.nome_fantasia : texto(req.body.nomeFantasia),
+        cnpj: req.body.cnpj === undefined ? e.cnpj : texto(req.body.cnpj),
+        email: req.body.email === undefined ? e.email : texto(req.body.email),
+        telefone: req.body.telefone === undefined ? e.telefone : texto(req.body.telefone),
+        endereco: req.body.endereco === undefined ? e.endereco : texto(req.body.endereco),
+        cidade: req.body.cidade === undefined ? e.cidade : texto(req.body.cidade),
+        estado: req.body.estado === undefined ? e.estado : texto(req.body.estado).toUpperCase(),
+        cep: req.body.cep === undefined ? e.cep : texto(req.body.cep),
+        inscricaoEstadual: req.body.inscricaoEstadual === undefined ? e.inscricao_estadual : texto(req.body.inscricaoEstadual),
+        mensagemComprovante: req.body.mensagemComprovante === undefined ? e.mensagem_comprovante : texto(req.body.mensagemComprovante),
+        permiteEstoqueNegativo:
+          req.body.permiteEstoqueNegativo === undefined
+            ? e.permite_estoque_negativo
+            : Boolean(req.body.permiteEstoqueNegativo)
+      }
+
+      if (!dados.nome) {
+        return res.status(400).json({ erro: 'Nome da empresa é obrigatório.' })
+      }
+
+      if (dados.estado && dados.estado.length !== 2) {
+        return res.status(400).json({ erro: 'UF deve possuir 2 caracteres.' })
+      }
+
+      const r = await pool.query(`
+        UPDATE empresas SET
+          nome=$1,
+          nome_fantasia=$2,
+          cnpj=$3,
+          email=$4,
+          telefone=$5,
+          endereco=$6,
+          cidade=$7,
+          estado=$8,
+          cep=$9,
+          inscricao_estadual=$10,
+          mensagem_comprovante=$11,
+          permite_estoque_negativo=$12,
+          atualizada_em=CURRENT_TIMESTAMP
+        WHERE id=$13
+        RETURNING *
+      `, [
+        dados.nome,
+        dados.nomeFantasia || null,
+        dados.cnpj || null,
+        dados.email || null,
+        dados.telefone || null,
+        dados.endereco || null,
+        dados.cidade || null,
+        dados.estado || null,
+        dados.cep || null,
+        dados.inscricaoEstadual || null,
+        dados.mensagemComprovante || null,
+        dados.permiteEstoqueNegativo,
+        req.usuario.empresaId
+      ])
+
+      res.json({
+        mensagem: 'Configurações salvas.',
+        empresa: r.rows[0]
+      })
+    } catch (erro) {
+      if (erro.code === '23505') {
+        return res.status(409).json({ erro: 'CNPJ já cadastrado.' })
+      }
+
+      console.error(erro)
+      res.status(500).json({ erro: 'Erro ao atualizar empresa.' })
+    }
   }
-);
+)
 
-module.exports = router;
+module.exports = router

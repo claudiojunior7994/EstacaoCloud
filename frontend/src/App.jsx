@@ -447,6 +447,11 @@ function App() {
     precoClube: '',
     estoque: '',
     estoqueMinimo: '',
+    unidade: 'UN',
+    pesavel: false,
+    plu: '',
+    fornecedorId: '',
+    etiquetaAtiva: true,
   }
 
   const [novoProduto, setNovoProduto] = useState(produtoVazio)
@@ -929,6 +934,22 @@ function App() {
       return
     }
 
+    if (
+      novoProduto.pesavel &&
+      !String(novoProduto.plu || '').trim()
+    ) {
+      alert('Produto pesável precisa possuir um PLU.')
+      return
+    }
+
+    if (
+      !novoProduto.codigoBarras.trim() &&
+      !String(novoProduto.plu || '').trim()
+    ) {
+      alert('Informe o código de barras ou o PLU do produto.')
+      return
+    }
+
     const payload = {
       codigoBarras: novoProduto.codigoBarras.trim(),
       nome: novoProduto.nome.trim(),
@@ -941,6 +962,13 @@ function App() {
         : null,
       estoque: Number(novoProduto.estoque || 0),
       estoqueMinimo: Number(novoProduto.estoqueMinimo || 0),
+      unidade: novoProduto.unidade || 'UN',
+      pesavel: Boolean(novoProduto.pesavel),
+      plu: String(novoProduto.plu || '').trim(),
+      fornecedorId: novoProduto.fornecedorId
+        ? Number(novoProduto.fornecedorId)
+        : null,
+      etiquetaAtiva: Boolean(novoProduto.etiquetaAtiva),
     }
 
     try {
@@ -978,6 +1006,22 @@ function App() {
           '',
         estoque: Number(dados.produto.estoque || 0),
         estoqueMinimo: Number(dados.produto.estoqueMinimo || 0),
+        unidade: dados.produto.unidade || 'UN',
+        pesavel: Boolean(dados.produto.pesavel),
+        plu: dados.produto.plu || '',
+        fornecedorId:
+          dados.produto.fornecedorId ??
+          dados.produto.fornecedor_id ??
+          null,
+        fornecedorNome:
+          dados.produto.fornecedorNome ??
+          dados.produto.fornecedor_nome ??
+          '',
+        etiquetaAtiva: Boolean(
+          dados.produto.etiquetaAtiva ??
+          dados.produto.etiqueta_ativa ??
+          true
+        ),
       }
 
       if (produtoEmEdicao) {
@@ -1020,6 +1064,19 @@ function App() {
       ),
       estoque: String(produto.estoque ?? ''),
       estoqueMinimo: String(produto.estoqueMinimo ?? ''),
+      unidade: produto.unidade || 'UN',
+      pesavel: Boolean(produto.pesavel),
+      plu: produto.plu || '',
+      fornecedorId: String(
+        produto.fornecedorId ??
+        produto.fornecedor_id ??
+        ''
+      ),
+      etiquetaAtiva: Boolean(
+        produto.etiquetaAtiva ??
+        produto.etiqueta_ativa ??
+        true
+      ),
     })
     setMostrarFormularioProduto(true)
   }
@@ -1472,6 +1529,119 @@ function App() {
           </div>
 
           <div className="form-group">
+            <label htmlFor="unidade">Unidade de medida *</label>
+            <select
+              id="unidade"
+              name="unidade"
+              value={novoProduto.unidade}
+              onChange={alterarCampoProduto}
+              style={{
+                width: '100%',
+                height: '38px',
+                padding: '0 11px',
+                border: '1px solid #303c4b',
+                borderRadius: '5px',
+                outline: 'none',
+                color: '#ffffff',
+                background: '#0e151e',
+              }}
+            >
+              <option value="UN">UN - Unidade</option>
+              <option value="KG">KG - Quilograma</option>
+              <option value="G">G - Grama</option>
+              <option value="L">L - Litro</option>
+              <option value="ML">ML - Mililitro</option>
+              <option value="CX">CX - Caixa</option>
+              <option value="PC">PC - Peça</option>
+              <option value="PCT">PCT - Pacote</option>
+              <option value="DZ">DZ - Dúzia</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                marginTop: '24px',
+              }}
+            >
+              <input
+                name="pesavel"
+                type="checkbox"
+                checked={Boolean(novoProduto.pesavel)}
+                onChange={alterarCampoProduto}
+              />
+              Produto pesável / balança
+            </label>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="plu">PLU</label>
+            <input
+              id="plu"
+              name="plu"
+              type="text"
+              inputMode="numeric"
+              placeholder={novoProduto.pesavel ? 'Ex.: 123' : 'Opcional'}
+              value={novoProduto.plu}
+              onChange={alterarCampoProduto}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="fornecedorId">Fornecedor</label>
+            <select
+              id="fornecedorId"
+              name="fornecedorId"
+              value={novoProduto.fornecedorId}
+              onChange={alterarCampoProduto}
+              style={{
+                width: '100%',
+                height: '38px',
+                padding: '0 11px',
+                border: '1px solid #303c4b',
+                borderRadius: '5px',
+                outline: 'none',
+                color: '#ffffff',
+                background: '#0e151e',
+              }}
+            >
+              <option value="">Sem fornecedor vinculado</option>
+              {fornecedores.map((fornecedor) => (
+                <option
+                  key={fornecedor.id}
+                  value={fornecedor.id}
+                >
+                  {fornecedor.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                marginTop: '24px',
+              }}
+            >
+              <input
+                name="etiquetaAtiva"
+                type="checkbox"
+                checked={Boolean(novoProduto.etiquetaAtiva)}
+                onChange={alterarCampoProduto}
+              />
+              Disponível para etiqueta de gôndola
+            </label>
+          </div>
+
+          <div className="form-group">
             <label htmlFor="precoCusto">Preço de custo</label>
             <input
               id="precoCusto"
@@ -1541,7 +1711,7 @@ function App() {
               name="estoque"
               type="number"
               min="0"
-              step="1"
+              step={novoProduto.pesavel ? '0.001' : '1'}
               placeholder="0"
               value={novoProduto.estoque}
               onChange={alterarCampoProduto}
@@ -1555,7 +1725,7 @@ function App() {
               name="estoqueMinimo"
               type="number"
               min="0"
-              step="1"
+              step={novoProduto.pesavel ? '0.001' : '1'}
               placeholder="0"
               value={novoProduto.estoqueMinimo}
               onChange={alterarCampoProduto}
