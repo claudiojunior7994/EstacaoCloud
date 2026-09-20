@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react'
 import Login from './components/Login'
 import Pdv from './components/pdv/Pdv'
 import PlataformaAdmin from './components/PlataformaAdmin'
+import {
+  MovimentacoesEstoque,
+  InventarioEstoque,
+  EtiquetasGondola,
+} from './components/estoque/EstoqueOperacao'
 import './App.css'
 
 function App() {
@@ -3704,6 +3709,20 @@ function App() {
       case 'fornecedores':
         return renderFornecedores()
 
+      case 'movimentacoes-estoque':
+        return (
+          <MovimentacoesEstoque
+            token={token}
+            produtos={produtos}
+          />
+        )
+
+      case 'inventario':
+        return <InventarioEstoque token={token} />
+
+      case 'etiquetas':
+        return <EtiquetasGondola token={token} />
+
       case 'relatorios':
         return renderRelatorios()
 
@@ -3813,6 +3832,31 @@ function App() {
               >
                 🚚 Fornecedores
               </button>
+
+              <button
+                type="button"
+                className={`menu-item ${pagina === 'movimentacoes-estoque' ? 'active' : ''}`}
+                onClick={() => abrirPagina('movimentacoes-estoque')}
+              >
+                🔄 Movimentações
+              </button>
+
+              <button
+                type="button"
+                className={`menu-item ${pagina === 'inventario' ? 'active' : ''}`}
+                onClick={() => abrirPagina('inventario')}
+              >
+                📋 Inventário
+              </button>
+
+              <button
+                type="button"
+                className={`menu-item ${pagina === 'etiquetas' ? 'active' : ''}`}
+                onClick={() => abrirPagina('etiquetas')}
+              >
+                🏷️ Etiquetas
+              </button>
+
             </>
           ) : (
             <>
@@ -3864,6 +3908,30 @@ function App() {
                 onClick={() => abrirPagina('fornecedores')}
               >
                 🚚 Fornecedores
+              </button>
+
+              <button
+                type="button"
+                className={`menu-item ${pagina === 'movimentacoes-estoque' ? 'active' : ''}`}
+                onClick={() => abrirPagina('movimentacoes-estoque')}
+              >
+                🔄 Estoque
+              </button>
+
+              <button
+                type="button"
+                className={`menu-item ${pagina === 'inventario' ? 'active' : ''}`}
+                onClick={() => abrirPagina('inventario')}
+              >
+                📋 Inventário
+              </button>
+
+              <button
+                type="button"
+                className={`menu-item ${pagina === 'etiquetas' ? 'active' : ''}`}
+                onClick={() => abrirPagina('etiquetas')}
+              >
+                🏷️ Etiquetas
               </button>
 
               <button

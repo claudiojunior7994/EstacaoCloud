@@ -1,0 +1,124 @@
+.estoque-operacao {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.estoque-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.estoque-page-header h2 {
+  margin: 3px 0;
+}
+
+.estoque-page-header p {
+  margin: 0;
+}
+
+.estoque-form-grid {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.estoque-form-grid .form-group {
+  min-width: 190px;
+}
+
+.estoque-grow {
+  flex: 1;
+}
+
+.estoque-form-grid select,
+.estoque-form-grid input,
+.estoque-count-input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid #303c4b;
+  border-radius: 5px;
+  background: #0e151e;
+  color: #fff;
+  outline: none;
+}
+
+.estoque-count-input {
+  width: 105px;
+}
+
+.estoque-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.etiqueta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.etiqueta-card {
+  min-height: 145px;
+  padding: 14px;
+  border: 1px solid #3a4656;
+  border-radius: 8px;
+  background: #fff;
+  color: #111;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.etiqueta-card strong {
+  font-size: 16px;
+}
+
+.etiqueta-codigo,
+.etiqueta-unidade {
+  font-size: 11px;
+}
+
+.etiqueta-preco {
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.etiqueta-clube {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .etiqueta-print-area,
+  .etiqueta-print-area * {
+    visibility: visible !important;
+  }
+
+  .etiqueta-print-area {
+    position: absolute;
+    inset: 0;
+    background: white;
+    padding: 10mm;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .etiqueta-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .etiqueta-card {
+    break-inside: avoid;
+    border: 1px solid #000;
+  }
+}
