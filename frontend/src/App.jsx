@@ -7,7 +7,9 @@ import {
   InventarioEstoque,
   EtiquetasGondola,
 } from './components/estoque/EstoqueOperacao'
+import RecebimentoMercadorias from './components/estoque/RecebimentoMercadorias'
 import './App.css'
+import LotesValidades from './components/estoque/LotesValidades'
 
 function App() {
   const [acessoPlataforma, setAcessoPlataforma] = useState(false)
@@ -3720,6 +3722,18 @@ function App() {
       case 'inventario':
         return <InventarioEstoque token={token} />
 
+      case 'recebimentos':
+        return (
+          <RecebimentoMercadorias
+            token={token}
+            produtos={produtos}
+            fornecedores={fornecedores}
+          />
+        )
+
+      case 'validades':
+        return <LotesValidades token={token} />
+
       case 'etiquetas':
         return <EtiquetasGondola token={token} />
 
@@ -3850,6 +3864,20 @@ function App() {
               </button>
 
               <button
+            className={`menu-item ${pagina === 'recebimentos' ? 'active' : ''}`}
+            onClick={() => abrirPagina('recebimentos')}
+          >
+            📥 Recebimento
+          </button>
+
+              <button
+                className={`menu-item ${pagina === 'validades' ? 'active' : ''}`}
+                onClick={() => abrirPagina('validades')}
+              >
+                📅 Lotes / Validades
+              </button>
+
+          <button
                 type="button"
                 className={`menu-item ${pagina === 'etiquetas' ? 'active' : ''}`}
                 onClick={() => abrirPagina('etiquetas')}
@@ -3927,6 +3955,20 @@ function App() {
               </button>
 
               <button
+            className={`menu-item ${pagina === 'recebimentos' ? 'active' : ''}`}
+            onClick={() => abrirPagina('recebimentos')}
+          >
+            📥 Recebimento
+          </button>
+
+              <button
+                className={`menu-item ${pagina === 'validades' ? 'active' : ''}`}
+                onClick={() => abrirPagina('validades')}
+              >
+                📅 Lotes / Validades
+              </button>
+
+          <button
                 type="button"
                 className={`menu-item ${pagina === 'etiquetas' ? 'active' : ''}`}
                 onClick={() => abrirPagina('etiquetas')}

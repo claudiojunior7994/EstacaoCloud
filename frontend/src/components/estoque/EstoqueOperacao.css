@@ -245,3 +245,203 @@
     print-color-adjust: exact !important;
   }
 }
+
+/* =========================================================
+   LOTES E VALIDADES
+   ========================================================= */
+
+.validade-resumo {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 20px 0 16px;
+}
+
+.validade-card {
+  background: #111b28;
+  border: 1px solid #263548;
+  border-radius: 10px;
+  padding: 16px 18px;
+  min-height: 86px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.validade-card strong {
+  display: block;
+  font-size: 13px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: #e7edf5;
+}
+
+.validade-card span {
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #93a4b7;
+}
+
+/* Vencido */
+.validade-card.validade-vencido {
+  border-left: 4px solid #dc3545;
+}
+
+/* Próximos 7 dias */
+.validade-card.validade-critico {
+  border-left: 4px solid #f59e0b;
+}
+
+/* Próximos 30 dias */
+.validade-card.validade-atencao {
+  border-left: 4px solid #eab308;
+}
+
+/* Sem validade */
+.validade-card:not(.validade-vencido):not(.validade-critico):not(.validade-atencao) {
+  border-left: 4px solid #2f80c9;
+}
+
+/* Tabela de lotes */
+.estoque-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.estoque-table th,
+.estoque-table td {
+  padding: 11px 12px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid #243244;
+  white-space: nowrap;
+}
+
+.estoque-table th {
+  font-size: 12px;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: #0d1621;
+}
+
+.estoque-table td {
+  font-size: 13px;
+  color: #dbe5ef;
+}
+
+/* Status de validade */
+.status-danger,
+.status-warning,
+.status-normal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 82px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status-danger {
+  background: rgba(220, 53, 69, .15);
+  color: #ff6b78;
+}
+
+.status-warning {
+  background: rgba(245, 158, 11, .15);
+  color: #fbbf24;
+}
+
+.status-normal {
+  background: rgba(34, 197, 94, .15);
+  color: #4ade80;
+}
+
+@media (max-width: 1000px) {
+  .validade-resumo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .validade-resumo {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+
+/* =========================================================
+   TABELAS OPERACIONAIS - PADRÃO ESTAÇÃOCLOUD
+   ========================================================= */
+
+.estoque-operacao .table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.estoque-operacao .table-wrapper table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.estoque-operacao .table-wrapper th,
+.estoque-operacao .table-wrapper td {
+  padding: 11px 16px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid #243244;
+  white-space: nowrap;
+}
+
+.estoque-operacao .table-wrapper th {
+  font-size: 12px;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: #0d1621;
+}
+
+.estoque-operacao .table-wrapper td {
+  font-size: 13px;
+  color: #dbe5ef;
+}
+
+.estoque-operacao .table-wrapper tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.estoque-operacao .table-wrapper tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Quando a tabela estiver vazia */
+.estoque-operacao .table-wrapper td[colspan] {
+  padding: 22px 16px;
+  text-align: center;
+  color: #8490a2;
+}
+
+/* Lotes / Validades também usa estoque-table */
+.estoque-operacao .estoque-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.estoque-operacao .estoque-table th,
+.estoque-operacao .estoque-table td {
+  padding: 11px 16px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid #243244;
+}
+

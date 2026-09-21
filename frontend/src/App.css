@@ -1028,3 +1028,35 @@ button {
   }
 }
 
+
+
+/* SIDEBAR - ROLAGEM VERTICAL */
+.sidebar {
+  height: 100vh;
+  min-height: 0;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #334155 #101720;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: #101720;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}

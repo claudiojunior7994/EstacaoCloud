@@ -16,6 +16,8 @@ const caixaRoutes = require('./data/caixa')
 const estoqueRoutes = require('./routes/estoque')
 const inventariosRoutes = require('./routes/inventarios')
 const etiquetasRoutes = require('./routes/etiquetas')
+const recebimentosRoutes = require('./routes/recebimentos')
+const lotesRoutes = require('./routes/lotes')
 
 // Administração Estação Group
 const plataformaAuthRoutes = require('./routes/plataformaAuth')
@@ -24,7 +26,7 @@ const plataformaAdminRoutes = require('./routes/plataformaAdmin')
 const autenticar = require('./middleware/auth')
 const permitirPerfis = require('./middleware/permissao')
 
-const { testarConexao } = require('./database/db')
+const { pool, testarConexao } = require('./database/db')
 
 
 const tentativasLogin = new Map()
@@ -114,6 +116,8 @@ app.use('/api/caixa', caixaRoutes)
 app.use('/api/estoque', estoqueRoutes)
 app.use('/api/inventarios', inventariosRoutes)
 app.use('/api/etiquetas', etiquetasRoutes)
+app.use('/api/recebimentos', recebimentosRoutes(pool, autenticar))
+app.use('/api/lotes', lotesRoutes)
 
 // =====================================================
 // ESTAÇÃO GROUP - ADMINISTRAÇÃO
