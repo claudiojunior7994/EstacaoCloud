@@ -260,6 +260,133 @@ function App() {
   const [usuarioEmEdicao, setUsuarioEmEdicao] = useState(null)
   const [novoUsuarioSistema, setNovoUsuarioSistema] = useState(usuarioVazio)
 
+  // TEF / CARTÕES
+  const [mostrarTef, setMostrarTef] = useState(false)
+  const [carregandoTef, setCarregandoTef] = useState(false)
+  const [salvandoTef, setSalvandoTef] = useState(false)
+
+  const [configuracaoTef, setConfiguracaoTef] = useState({
+    habilitado: false,
+    modo: 'simulacao',
+    provedor: '',
+    identificadorTerminal: '',
+  })
+
+  async function carregarConfiguracaoTef() {
+    setCarregandoTef(true)
+
+    try {
+      const resposta = await fetch(
+        `${API_URL}/api/tef/configuracao`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
+
+      const dados = await resposta.json()
+
+      if (!resposta.ok) {
+        throw new Error(
+          dados.erro ||
+            'Não foi possível carregar o TEF.',
+        )
+      }
+
+      const terminal001 =
+        dados.configuracao?.terminais?.find(
+          (item) => item.terminal === '001',
+        )
+
+      setConfiguracaoTef({
+        habilitado:
+          Boolean(dados.configuracao?.habilitado),
+        modo:
+          dados.configuracao?.modo || 'simulacao',
+        provedor:
+          dados.configuracao?.provedor || '',
+        identificadorTerminal:
+          terminal001?.identificador_tef || '',
+      })
+    } catch (erro) {
+      alert(erro.message)
+    } finally {
+      setCarregandoTef(false)
+    }
+  }
+
+  async function abrirConfiguracaoTef() {
+    setMostrarUsuarios(false)
+    setMostrarTef(true)
+    await carregarConfiguracaoTef()
+  }
+
+  async function salvarConfiguracaoTef() {
+    setSalvandoTef(true)
+
+    try {
+      const respostaConfiguracao = await fetch(
+        `${API_URL}/api/tef/configuracao`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            habilitado: configuracaoTef.habilitado,
+            modo: configuracaoTef.modo,
+            provedor:
+              configuracaoTef.provedor.trim(),
+          }),
+        },
+      )
+
+      const dadosConfiguracao =
+        await respostaConfiguracao.json()
+
+      if (!respostaConfiguracao.ok) {
+        throw new Error(
+          dadosConfiguracao.erro ||
+            'Não foi possível salvar o TEF.',
+        )
+      }
+
+      const respostaTerminal = await fetch(
+        `${API_URL}/api/tef/terminais/001`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            identificadorTef:
+              configuracaoTef.identificadorTerminal.trim(),
+            ativo: true,
+          }),
+        },
+      )
+
+      const dadosTerminal =
+        await respostaTerminal.json()
+
+      if (!respostaTerminal.ok) {
+        throw new Error(
+          dadosTerminal.erro ||
+            'Não foi possível configurar o terminal TEF.',
+        )
+      }
+
+      alert('Configuração TEF salva com sucesso.')
+    } catch (erro) {
+      alert(erro.message)
+    } finally {
+      setSalvandoTef(false)
+    }
+  }
+
   async function carregarUsuariosSistema() {
     if (!token || !['admin', 'gerente'].includes(usuarioLogado?.perfil)) {
       setUsuariosSistema([])
@@ -3505,9 +3632,166 @@ function App() {
             </button>
 
             <button type="button">🧾 Dados fiscais</button>
+
+            <button
+              type="button"
+              onClick={
+                podeAdministrarUsuarios
+                  ? abrirConfiguracaoTef
+                  : undefined
+              }
+              disabled={!podeAdministrarUsuarios}
+              title={
+                !podeAdministrarUsuarios
+                  ? 'Acesso permitido para administrador'
+                  : ''
+              }
+            >
+              💳 TEF / Cartões
+            </button>
+
             <button type="button">🔔 Preferências</button>
           </div>
         </article>
+
+        {mostrarTef && podeAdministrarUsuarios && (
+          <article className="panel product-form-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">
+                  PAGAMENTOS INTEGRADOS
+                </p>
+                <h3>TEF / Cartões</h3>
+              </div>
+
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setMostrarTef(false)}
+              >
+                Fechar
+              </button>
+            </div>
+
+            <p
+              className="welcome-text"
+              style={{ marginBottom: '18px' }}
+            >
+              Configure a integração do PDV com pinpad e
+              provedor TEF multiadquirente.
+            </p>
+
+            {carregandoTef ? (
+              <p>Carregando configuração TEF...</p>
+            ) : (
+              <div className="product-form">
+                <div className="form-group">
+                  <label>Integração TEF</label>
+
+                  <select
+                    value={
+                      configuracaoTef.habilitado
+                        ? 'sim'
+                        : 'nao'
+                    }
+                    onChange={(evento) =>
+                      setConfiguracaoTef((atual) => ({
+                        ...atual,
+                        habilitado:
+                          evento.target.value === 'sim',
+                      }))
+                    }
+                  >
+                    <option value="nao">
+                      Desativada
+                    </option>
+                    <option value="sim">
+                      Ativada
+                    </option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Modo</label>
+
+                  <select
+                    value={configuracaoTef.modo}
+                    onChange={(evento) =>
+                      setConfiguracaoTef((atual) => ({
+                        ...atual,
+                        modo: evento.target.value,
+                      }))
+                    }
+                  >
+                    <option value="simulacao">
+                      Simulação
+                    </option>
+                    <option value="producao">
+                      Produção
+                    </option>
+                  </select>
+                </div>
+
+                <div className="form-group form-group-large">
+                  <label>Provedor TEF</label>
+
+                  <input
+                    type="text"
+                    value={configuracaoTef.provedor}
+                    onChange={(evento) =>
+                      setConfiguracaoTef((atual) => ({
+                        ...atual,
+                        provedor: evento.target.value,
+                      }))
+                    }
+                    placeholder="Ex.: provedor multiadquirente"
+                  />
+                </div>
+
+                <div className="form-group form-group-large">
+                  <label>
+                    Identificador TEF — Caixa 001
+                  </label>
+
+                  <input
+                    type="text"
+                    value={
+                      configuracaoTef.identificadorTerminal
+                    }
+                    onChange={(evento) =>
+                      setConfiguracaoTef((atual) => ({
+                        ...atual,
+                        identificadorTerminal:
+                          evento.target.value,
+                      }))
+                    }
+                    placeholder="Identificador fornecido pelo TEF"
+                  />
+                </div>
+
+                <div
+                  style={{
+                    gridColumn: '1 / -1',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '10px',
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={salvarConfiguracaoTef}
+                    disabled={salvandoTef}
+                  >
+                    {salvandoTef
+                      ? 'Salvando...'
+                      : 'Salvar configuração TEF'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </article>
+        )}
 
         {mostrarUsuarios && podeConsultarUsuarios && (
           <article className="panel product-form-panel">

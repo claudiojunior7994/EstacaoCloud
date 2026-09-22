@@ -1817,3 +1817,36 @@ body {
   color: #0b5fa5;
   font-size: 14px;
 }
+
+/* STATUS TEF / PINPAD */
+.pdv-tef-status {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 10px 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.pdv-tef-status.processando {
+  border: 1px solid rgba(255, 193, 7, 0.45);
+  background: rgba(255, 193, 7, 0.08);
+}
+
+.pdv-tef-status.aprovado {
+  border: 1px solid rgba(46, 204, 113, 0.45);
+  background: rgba(46, 204, 113, 0.08);
+}
+
+.pdv-tef-status strong {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pdv-tef-status span {
+  opacity: 0.9;
+}

@@ -36,6 +36,8 @@ function Pdv({ usuario, token, onSair }) {
   const [formaPagamento, setFormaPagamento] = useState('')
   const [valorRecebido, setValorRecebido] = useState('')
   const [processandoVenda, setProcessandoVenda] = useState(false)
+  const [processandoTef, setProcessandoTef] = useState(false)
+  const [mensagemTef, setMensagemTef] = useState('')
   const [erroPagamento, setErroPagamento] = useState('')
 
   // PAGAMENTO MISTO
@@ -157,6 +159,14 @@ function Pdv({ usuario, token, onSair }) {
       )
 
       const dados = await resposta.json()
+
+      if (possuiPagamentoCartao) {
+        setProcessandoTef(false)
+
+        if (resposta.ok) {
+          setMensagemTef('Pagamento aprovado.')
+        }
+      }
 
       if (!resposta.ok) {
         throw new Error(
@@ -739,6 +749,8 @@ function Pdv({ usuario, token, onSair }) {
     setFormaPagamento('')
     setValorRecebido('')
     setErroPagamento('')
+    setProcessandoTef(false)
+    setMensagemTef('')
 
     focarCodigo()
   }
@@ -808,7 +820,26 @@ function Pdv({ usuario, token, onSair }) {
       }
     }
 
+    const possuiPagamentoCartao =
+      formaPagamento === 'Cartão de débito' ||
+      formaPagamento === 'Cartão de crédito' ||
+      (
+        formaPagamento === 'Pagamento Misto' &&
+        pagamentosVenda.some((parcela) =>
+          [
+            'Cartão de débito',
+            'Cartão de crédito',
+          ].includes(parcela.formaPagamento),
+        )
+      )
+
     setProcessandoVenda(true)
+    setProcessandoTef(possuiPagamentoCartao)
+    setMensagemTef(
+      possuiPagamentoCartao
+        ? 'Processando pagamento no pinpad...'
+        : '',
+    )
     setErroPagamento('')
 
     try {
@@ -1986,7 +2017,25 @@ function Pdv({ usuario, token, onSair }) {
                 Voltar
               </button>
 
-              <button
+                            {mensagemTef && (
+                <div
+                  className={
+                    processandoTef
+                      ? 'pdv-tef-status processando'
+                      : 'pdv-tef-status aprovado'
+                  }
+                >
+                  <strong>
+                    {processandoTef
+                      ? 'TEF — Aguarde'
+                      : 'TEF — Autorizado'}
+                  </strong>
+
+                  <span>{mensagemTef}</span>
+                </div>
+              )}
+
+<button
                 type="button"
                 className="ec-botao-principal"
                 onClick={confirmarPagamento}

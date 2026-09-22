@@ -3,6 +3,7 @@ const express = require('express')
 const { pool } = require('../database/db')
 const autenticar = require('../middleware/auth')
 const permitirPerfis = require('../middleware/permissao')
+const { processarTef } = require('../services/tef')
 
 const router = express.Router()
 
@@ -489,6 +490,187 @@ router.post(
         ]
       }
 
+      // ---------------------------------------------------------
+      // AUTORIZAÇÃO TEF
+      // Cartões são autorizados antes da conclusão da venda.
+      // No pagamento misto, apenas as parcelas de cartão passam aqui.
+      // ---------------------------------------------------------
+      const parcelasCartao =
+        pagamentosNormalizados.filter((parcela) =>
+          [
+            'Cartão de débito',
+            'Cartão de crédito',
+          ].includes(parcela.formaPagamento),
+        )
+
+      const transacoesTefAprovadas = []
+
+      if (parcelasCartao.length > 0) {
+        const configuracaoTef = await client.query(
+          `
+          SELECT
+            tef_habilitado,
+            tef_modo,
+            tef_provedor
+          FROM empresas
+          WHERE id = $1
+          `,
+          [req.usuario.empresaId],
+        )
+
+        const empresaTef = configuracaoTef.rows[0]
+
+        // Enquanto o TEF não estiver habilitado,
+        // preservamos o comportamento atual do PDV.
+        // Quando habilitado, cartão exige autorização TEF.
+        if (empresaTef?.tef_habilitado) {
+          const terminalTef = await client.query(
+            `
+            SELECT *
+            FROM tef_terminais
+            WHERE empresa_id = $1
+              AND terminal = $2
+              AND ativo = TRUE
+            `,
+            [
+              req.usuario.empresaId,
+              terminalNormalizado,
+            ],
+          )
+
+          if (!terminalTef.rows[0]) {
+            await client.query('ROLLBACK')
+
+            return res.status(409).json({
+              erro:
+                `Terminal ${terminalNormalizado} não está configurado para TEF.`,
+            })
+          }
+
+          for (const parcela of parcelasCartao) {
+            const tipoTef =
+              parcela.formaPagamento ===
+              'Cartão de débito'
+                ? 'debito'
+                : 'credito'
+
+            const registroTef = await client.query(
+              `
+              INSERT INTO tef_transacoes (
+                empresa_id,
+                terminal,
+                tipo,
+                valor,
+                provedor,
+                modo,
+                status
+              )
+              VALUES (
+                $1, $2, $3, $4, $5, $6, 'iniciada'
+              )
+              RETURNING *
+              `,
+              [
+                req.usuario.empresaId,
+                terminalNormalizado,
+                tipoTef,
+                parcela.valor,
+                empresaTef.tef_provedor,
+                empresaTef.tef_modo,
+              ],
+            )
+
+            const transacaoTef =
+              registroTef.rows[0]
+
+            let retornoTef
+
+            try {
+              retornoTef = await processarTef({
+                modo: empresaTef.tef_modo,
+                provedor: empresaTef.tef_provedor,
+                tipo: tipoTef,
+                valor: parcela.valor,
+                terminal: terminalNormalizado,
+              })
+            } catch (erroTef) {
+              await client.query(
+                `
+                UPDATE tef_transacoes
+                SET
+                  status = 'erro',
+                  mensagem = $1,
+                  atualizada_em = CURRENT_TIMESTAMP
+                WHERE id = $2
+                `,
+                [
+                  erroTef.message,
+                  transacaoTef.id,
+                ],
+              )
+
+              await client.query('COMMIT')
+
+              return res.status(502).json({
+                erro:
+                  `Falha no TEF: ${erroTef.message}`,
+              })
+            }
+
+            if (retornoTef.status !== 'aprovada') {
+              await client.query(
+                `
+                UPDATE tef_transacoes
+                SET
+                  status = $1,
+                  mensagem = $2,
+                  atualizada_em = CURRENT_TIMESTAMP
+                WHERE id = $3
+                `,
+                [
+                  retornoTef.status || 'negada',
+                  retornoTef.mensagem || null,
+                  transacaoTef.id,
+                ],
+              )
+
+              await client.query('COMMIT')
+
+              return res.status(402).json({
+                erro:
+                  retornoTef.mensagem ||
+                  'Pagamento não autorizado pelo TEF.',
+              })
+            }
+
+            await client.query(
+              `
+              UPDATE tef_transacoes
+              SET
+                status = 'aprovada',
+                nsu = $1,
+                autorizacao = $2,
+                identificador_externo = $3,
+                mensagem = $4,
+                atualizada_em = CURRENT_TIMESTAMP
+              WHERE id = $5
+              `,
+              [
+                retornoTef.nsu || null,
+                retornoTef.autorizacao || null,
+                retornoTef.identificadorExterno || null,
+                retornoTef.mensagem || null,
+                transacaoTef.id,
+              ],
+            )
+
+            transacoesTefAprovadas.push(
+              transacaoTef.id,
+            )
+          }
+        }
+      }
+
       // Cria a venda
       const resultadoVenda =
         await client.query(
@@ -535,6 +717,22 @@ router.post(
         )
 
       const venda = resultadoVenda.rows[0]
+
+      if (transacoesTefAprovadas.length > 0) {
+        await client.query(
+          `
+          UPDATE tef_transacoes
+          SET
+            venda_id = $1,
+            atualizada_em = CURRENT_TIMESTAMP
+          WHERE id = ANY($2::int[])
+          `,
+          [
+            venda.id,
+            transacoesTefAprovadas,
+          ],
+        )
+      }
 
       // Itens + baixa de estoque
       for (const item of itensNormalizados) {
