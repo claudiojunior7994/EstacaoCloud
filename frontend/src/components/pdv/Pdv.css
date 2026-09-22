@@ -1423,3 +1423,258 @@ body {
     padding: 12px;
   }
 }
+
+/* =========================================================
+   PAGAMENTO PDV
+   ========================================================= */
+
+.ec-pagamento-modal {
+  width: min(820px, 94vw);
+  max-height: 94vh;
+  overflow-y: auto;
+  padding: 18px;
+  border-radius: 17px;
+  background: #fff;
+  color: #0b2238;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.38);
+}
+
+.ec-pagamento-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 4px 4px 14px;
+}
+
+.ec-pagamento-header span {
+  color: #1677c8;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.ec-pagamento-header h2 {
+  margin: 5px 0 3px;
+  font-size: 30px;
+  color: #0b2238;
+}
+
+.ec-pagamento-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.ec-pagamento-total {
+  min-height: 112px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: #0b2238;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.ec-pagamento-total span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ec-pagamento-total strong {
+  margin-top: 4px;
+  font-size: 44px;
+}
+
+.ec-pagamento-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.ec-pagamento-opcao {
+  min-height: 74px;
+  padding: 10px 15px;
+  border: 1px solid #ccd9e4;
+  border-radius: 11px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 48px 1fr 22px;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: .15s ease;
+}
+
+.ec-pagamento-opcao:hover:not(:disabled) {
+  border-color: #1677c8;
+  box-shadow: 0 4px 14px rgba(22, 119, 200, .12);
+}
+
+.ec-pagamento-opcao.selecionado {
+  border: 2px solid #1677c8;
+  background: #eef7ff;
+}
+
+.ec-pagamento-opcao.indisponivel {
+  opacity: .48;
+  cursor: not-allowed;
+}
+
+.ec-pagamento-icone {
+  width: 43px;
+  height: 43px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.ec-pagamento-icone.dinheiro { background: #22a95b; }
+.ec-pagamento-icone.pix { background: #16b9b0; }
+.ec-pagamento-icone.debito { background: #2584d8; }
+.ec-pagamento-icone.credito { background: #3546a8; }
+.ec-pagamento-icone.vale { background: #e59b18; }
+.ec-pagamento-icone.presente { background: #d93845; }
+.ec-pagamento-icone.outras { background: #5c7083; }
+.ec-pagamento-icone.misto { background: #673ab7; }
+
+.ec-pagamento-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ec-pagamento-texto strong {
+  font-size: 16px;
+  color: #10283e;
+}
+
+.ec-pagamento-texto small {
+  color: #718096;
+  font-size: 11px;
+}
+
+.ec-pagamento-seta {
+  color: #48677f;
+  font-size: 28px;
+  font-weight: 400;
+}
+
+.ec-pagamento-dinheiro,
+.ec-pagamento-selecionado {
+  margin-top: 14px;
+}
+
+.ec-pagamento-troco {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #eef7ee;
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+}
+
+.ec-pagamento-selecionado {
+  padding: 12px;
+  border-radius: 8px;
+  background: #eef5ff;
+  text-align: center;
+}
+
+.ec-pagamento-acoes {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 10px;
+}
+
+.ec-pagamento-acoes button {
+  min-height: 48px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+@media (max-width: 680px) {
+  .ec-pagamento-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* AJUSTE PAGAMENTO - CABER INTEIRO NA TELA SEM ROLAGEM */
+
+.ec-pagamento-modal {
+  width: min(820px, 94vw);
+  max-height: none;
+  overflow: visible;
+  padding: 14px 16px;
+}
+
+.ec-pagamento-header {
+  padding: 0 3px 9px;
+}
+
+.ec-pagamento-header h2 {
+  margin: 2px 0;
+  font-size: 25px;
+}
+
+.ec-pagamento-header p {
+  font-size: 12px;
+}
+
+.ec-pagamento-total {
+  min-height: 78px;
+  margin-bottom: 10px;
+}
+
+.ec-pagamento-total strong {
+  font-size: 36px;
+  margin-top: 1px;
+}
+
+.ec-pagamento-grid {
+  gap: 7px;
+}
+
+.ec-pagamento-opcao {
+  min-height: 58px;
+  padding: 7px 12px;
+  grid-template-columns: 38px 1fr 18px;
+  gap: 10px;
+}
+
+.ec-pagamento-icone {
+  width: 35px;
+  height: 35px;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.ec-pagamento-texto strong {
+  font-size: 14px;
+}
+
+.ec-pagamento-texto small {
+  font-size: 9px;
+}
+
+.ec-pagamento-seta {
+  font-size: 23px;
+}
+
+.ec-pagamento-acoes {
+  margin-top: 10px;
+}
+
+.ec-pagamento-acoes button {
+  min-height: 43px;
+}
+

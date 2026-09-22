@@ -1701,14 +1701,13 @@ function Pdv({ usuario, token, onSair }) {
 
       {modalPagamento && (
         <div className="ec-modal-overlay">
-          <section
-            className="ec-modal-sangria"
-            style={{ maxWidth: '620px' }}
-          >
-            <div className="ec-modal-cabecalho">
+          <section className="ec-pagamento-modal">
+
+            <div className="ec-pagamento-header">
               <div>
                 <span>FINALIZAÇÃO DA VENDA</span>
                 <h2>Pagamento</h2>
+                <p>Selecione a forma de pagamento para concluir a venda.</p>
               </div>
 
               <button
@@ -1720,89 +1719,73 @@ function Pdv({ usuario, token, onSair }) {
               </button>
             </div>
 
-            <div
-              style={{
-                marginBottom: '20px',
-                padding: '18px',
-                background: '#0b2238',
-                borderRadius: '10px',
-                textAlign: 'center',
-                color: '#fff',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '12px',
-                  opacity: 0.8,
-                  marginBottom: '5px',
-                }}
-              >
-                TOTAL DA VENDA
-              </div>
-
-              <strong style={{ fontSize: '38px' }}>
-                {formatarMoeda(totalVenda)}
-              </strong>
+            <div className="ec-pagamento-total">
+              <span>TOTAL DA VENDA</span>
+              <strong>{formatarMoeda(totalVenda)}</strong>
             </div>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                gap: '10px',
-                marginBottom: '14px',
-              }}
-            >
+            <div className="ec-pagamento-grid">
               {[
-                'Dinheiro',
-                'Pix',
-                'Cartão de débito',
-                'Cartão de crédito',
-              ].map((forma) => (
+                { nome: 'Dinheiro', tipo: 'dinheiro', ativo: true },
+                { nome: 'Pix', tipo: 'pix', ativo: true },
+                { nome: 'Cartão de débito', tipo: 'debito', ativo: true },
+                { nome: 'Cartão de crédito', tipo: 'credito', ativo: true },
+                { nome: 'Vale Alimentação', tipo: 'vale', ativo: false },
+                { nome: 'Vale Presente', tipo: 'presente', ativo: false },
+                { nome: 'Outras Formas', tipo: 'outras', ativo: false },
+                { nome: 'Pagamento Misto', tipo: 'misto', ativo: false },
+              ].map((opcao) => (
                 <button
-                  key={forma}
+                  key={opcao.nome}
                   type="button"
+                  disabled={!opcao.ativo}
+                  className={[
+                    'ec-pagamento-opcao',
+                    formaPagamento === opcao.nome ? 'selecionado' : '',
+                    !opcao.ativo ? 'indisponivel' : '',
+                  ].join(' ')}
                   onClick={() => {
-                    setFormaPagamento(forma)
+                    if (!opcao.ativo) return
+
+                    setFormaPagamento(opcao.nome)
                     setErroPagamento('')
 
-                    if (forma !== 'Dinheiro') {
+                    if (opcao.nome !== 'Dinheiro') {
                       setValorRecebido('')
                     }
                   }}
-                  style={{
-                    padding: '18px 10px',
-                    borderRadius: '9px',
-                    border:
-                      formaPagamento === forma
-                        ? '3px solid #1d8cff'
-                        : '1px solid #cbd5e1',
-                    background:
-                      formaPagamento === forma
-                        ? '#eaf4ff'
-                        : '#fff',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    fontSize: '15px',
-                  }}
                 >
-                  {forma === 'Dinheiro' && '💵 '}
-                  {forma === 'Pix' && '◆ '}
-                  {forma === 'Cartão de débito' && '💳 '}
-                  {forma === 'Cartão de crédito' && '💳 '}
-                  {forma}
+                  <span className={`ec-pagamento-icone ${opcao.tipo}`}>
+                    {opcao.tipo === 'dinheiro' && '$'}
+                    {opcao.tipo === 'pix' && '◇'}
+                    {opcao.tipo === 'debito' && 'D'}
+                    {opcao.tipo === 'credito' && 'C'}
+                    {opcao.tipo === 'vale' && 'V'}
+                    {opcao.tipo === 'presente' && 'P'}
+                    {opcao.tipo === 'outras' && '+'}
+                    {opcao.tipo === 'misto' && 'M'}
+                  </span>
+
+                  <span className="ec-pagamento-texto">
+                    <strong>{opcao.nome}</strong>
+                    {!opcao.ativo && <small>Em preparação</small>}
+                    {opcao.tipo === 'misto' && opcao.ativo && (
+                      <small>Mais de uma forma de pagamento</small>
+                    )}
+                  </span>
+
+                  <span className="ec-pagamento-seta">›</span>
                 </button>
               ))}
             </div>
 
             {formaPagamento === 'Dinheiro' && (
-              <div style={{ marginBottom: '18px' }}>
+              <div className="ec-pagamento-dinheiro">
                 <label className="ec-modal-campo">
                   <span>Valor recebido</span>
 
                   <div className="ec-campo-moeda">
                     <b>R$</b>
-
                     <input
                       type="text"
                       inputMode="decimal"
@@ -1817,46 +1800,25 @@ function Pdv({ usuario, token, onSair }) {
                   </div>
                 </label>
 
-                <div
-                  style={{
-                    marginTop: '12px',
-                    padding: '13px',
-                    borderRadius: '8px',
-                    background: '#eef7ee',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    fontSize: '17px',
-                  }}
-                >
+                <div className="ec-pagamento-troco">
                   <span>TROCO</span>
                   <strong>{formatarMoeda(troco)}</strong>
                 </div>
               </div>
             )}
 
-            {formaPagamento &&
-              formaPagamento !== 'Dinheiro' && (
-                <div
-                  style={{
-                    padding: '14px',
-                    borderRadius: '8px',
-                    marginBottom: '18px',
-                    background: '#eef5ff',
-                    textAlign: 'center',
-                  }}
-                >
-                  Forma selecionada:
-                  <strong> {formaPagamento}</strong>
-                </div>
-              )}
-
-            {erroPagamento && (
-              <div className="ec-modal-erro">
-                {erroPagamento}
+            {formaPagamento && formaPagamento !== 'Dinheiro' && (
+              <div className="ec-pagamento-selecionado">
+                Forma selecionada:
+                <strong> {formaPagamento}</strong>
               </div>
             )}
 
-            <div className="ec-modal-acoes">
+            {erroPagamento && (
+              <div className="ec-modal-erro">{erroPagamento}</div>
+            )}
+
+            <div className="ec-pagamento-acoes">
               <button
                 type="button"
                 className="ec-botao-secundario"
@@ -1870,15 +1832,14 @@ function Pdv({ usuario, token, onSair }) {
                 type="button"
                 className="ec-botao-principal"
                 onClick={confirmarPagamento}
-                disabled={
-                  processandoVenda || !formaPagamento
-                }
+                disabled={processandoVenda || !formaPagamento}
               >
                 {processandoVenda
                   ? 'Processando...'
                   : 'Confirmar pagamento'}
               </button>
             </div>
+
           </section>
         </div>
       )}
