@@ -1,0 +1,47 @@
+{
+  "name": "estacaocloud-desktop",
+  "version": "1.0.1",
+  "description": "EstacaoCloud - Sistema de Gestao e PDV",
+  "main": "desktop/main.cjs",
+  "author": "Estacao Group",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "desktop": "electron .",
+    "build:front": "npm --prefix frontend run build",
+    "build:win": "npm run build:front && electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.estacaogroup.estacaocloud",
+    "productName": "EstacaoCloud",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/**/*",
+      "frontend/dist/**/*",
+      "backend/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "EstacaoCloud"
+    },
+    "asarUnpack": [
+      "backend/**/*"
+    ]
+  },
+  "allowScripts": {
+    "electron@38.8.6": true,
+    "electron-winstaller@5.4.0": true
+  }
+}
