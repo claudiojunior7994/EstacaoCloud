@@ -70,6 +70,32 @@ async function carregarItensVenda(
   return resultado.rows.map(mapItem)
 }
 
+async function carregarPagamentosVenda(
+  executor,
+  vendaId,
+) {
+  const resultado = await executor.query(
+    `
+    SELECT
+      id,
+      forma_pagamento,
+      valor,
+      criada_em
+    FROM venda_pagamentos
+    WHERE venda_id = $1
+    ORDER BY id
+    `,
+    [vendaId],
+  )
+
+  return resultado.rows.map((r) => ({
+    id: r.id,
+    formaPagamento: r.forma_pagamento,
+    valor: Number(r.valor),
+    criadaEm: r.criada_em,
+  }))
+}
+
 // LISTAR VENDAS
 router.get(
   '/',
@@ -128,6 +154,7 @@ router.post(
         itens,
         clienteId,
         formaPagamento,
+        pagamentos = [],
         desconto = 0,
         terminal = '001',
       } = req.body
@@ -154,12 +181,51 @@ router.post(
         'Dinheiro',
         'Cartão de débito',
         'Cartão de crédito',
+        'Pagamento Misto',
+      ]
+
+      const formasParcelasPermitidas = [
+        'Pix',
+        'Dinheiro',
+        'Cartão de débito',
+        'Cartão de crédito',
       ]
 
       if (!formasPermitidas.includes(pagamento)) {
         return res.status(400).json({
           erro: 'Forma de pagamento inválida.',
         })
+      }
+
+      if (
+        pagamento === 'Pagamento Misto' &&
+        (!Array.isArray(pagamentos) || pagamentos.length < 2)
+      ) {
+        return res.status(400).json({
+          erro:
+            'Pagamento misto precisa possuir pelo menos duas formas de pagamento.',
+        })
+      }
+
+      if (pagamento === 'Pagamento Misto') {
+        for (const parcela of pagamentos) {
+          const formaParcela = String(
+            parcela?.formaPagamento || '',
+          ).trim()
+
+          const valorParcela = numero(parcela?.valor)
+
+          if (
+            !formasParcelasPermitidas.includes(formaParcela) ||
+            valorParcela === null ||
+            valorParcela <= 0
+          ) {
+            return res.status(400).json({
+              erro:
+                'Existe uma forma ou valor inválido no pagamento misto.',
+            })
+          }
+        }
       }
 
       await client.query('BEGIN')
@@ -377,6 +443,52 @@ router.post(
       const total =
         subtotal - descontoNormalizado
 
+      // Monta a composição financeira da venda.
+      // Toda venda passa a possuir pagamentos detalhados,
+      // inclusive quando existe apenas uma forma.
+      let pagamentosNormalizados = []
+
+      if (pagamento === 'Pagamento Misto') {
+        pagamentosNormalizados = pagamentos.map((parcela) => ({
+          formaPagamento: String(
+            parcela.formaPagamento || '',
+          ).trim(),
+          valor: Number(parcela.valor),
+        }))
+
+        const totalPagamentos =
+          pagamentosNormalizados.reduce(
+            (soma, parcela) => soma + parcela.valor,
+            0,
+          )
+
+        // Trabalha em centavos para evitar erro de ponto flutuante.
+        const totalVendaCentavos =
+          Math.round(total * 100)
+
+        const totalPagamentosCentavos =
+          Math.round(totalPagamentos * 100)
+
+        if (
+          totalPagamentosCentavos !==
+          totalVendaCentavos
+        ) {
+          await client.query('ROLLBACK')
+
+          return res.status(400).json({
+            erro:
+              'A soma das formas de pagamento precisa ser igual ao total da venda.',
+          })
+        }
+      } else {
+        pagamentosNormalizados = [
+          {
+            formaPagamento: pagamento,
+            valor: total,
+          },
+        ]
+      }
+
       // Cria a venda
       const resultadoVenda =
         await client.query(
@@ -519,43 +631,56 @@ router.post(
         )
       }
 
-      // Atualiza caixa
-      let colunaCaixa
-
-      if (pagamento === 'Dinheiro') {
-        colunaCaixa = 'vendas_dinheiro'
+      // Registra os pagamentos detalhados e
+      // atualiza cada forma no caixa.
+      const colunasPagamento = {
+        Dinheiro: 'vendas_dinheiro',
+        Pix: 'vendas_pix',
+        'Cartão de débito': 'vendas_debito',
+        'Cartão de crédito': 'vendas_credito',
       }
 
-      if (pagamento === 'Pix') {
-        colunaCaixa = 'vendas_pix'
-      }
+      for (const parcela of pagamentosNormalizados) {
+        await client.query(
+          `
+          INSERT INTO venda_pagamentos (
+            venda_id,
+            forma_pagamento,
+            valor
+          )
+          VALUES ($1, $2, $3)
+          `,
+          [
+            venda.id,
+            parcela.formaPagamento,
+            parcela.valor,
+          ],
+        )
 
-      if (
-        pagamento === 'Cartão de débito'
-      ) {
-        colunaCaixa = 'vendas_debito'
-      }
+        const colunaCaixa =
+          colunasPagamento[parcela.formaPagamento]
 
-      if (
-        pagamento === 'Cartão de crédito'
-      ) {
-        colunaCaixa = 'vendas_credito'
-      }
+        if (!colunaCaixa) {
+          throw new Error(
+            'Forma de pagamento sem coluna correspondente no caixa.',
+          )
+        }
 
-      await client.query(
-        `
-        UPDATE caixas
-        SET ${colunaCaixa} =
-          ${colunaCaixa} + $1
-        WHERE id = $2
-          AND empresa_id = $3
-        `,
-        [
-          total,
-          caixa.id,
-          req.usuario.empresaId,
-        ],
-      )
+        await client.query(
+          `
+          UPDATE caixas
+          SET ${colunaCaixa} =
+            ${colunaCaixa} + $1
+          WHERE id = $2
+            AND empresa_id = $3
+          `,
+          [
+            parcela.valor,
+            caixa.id,
+            req.usuario.empresaId,
+          ],
+        )
+      }
 
       await client.query('COMMIT')
 
@@ -781,58 +906,73 @@ router.patch(
         )
 
       if (resultadoCaixa.rows[0]) {
-        let colunaCaixa
-
-        if (
-          venda.forma_pagamento ===
-          'Dinheiro'
-        ) {
-          colunaCaixa =
-            'vendas_dinheiro'
-        }
-
-        if (
-          venda.forma_pagamento ===
-          'Pix'
-        ) {
-          colunaCaixa =
-            'vendas_pix'
-        }
-
-        if (
-          venda.forma_pagamento ===
-          'Cartão de débito'
-        ) {
-          colunaCaixa =
-            'vendas_debito'
-        }
-
-        if (
-          venda.forma_pagamento ===
-          'Cartão de crédito'
-        ) {
-          colunaCaixa =
-            'vendas_credito'
-        }
-
-        if (colunaCaixa) {
-          await client.query(
-            `
-            UPDATE caixas
-            SET ${colunaCaixa} =
-              GREATEST(
-                0,
-                ${colunaCaixa} - $1
-              )
-            WHERE id = $2
-              AND empresa_id = $3
-            `,
-            [
-              Number(venda.total),
-              venda.caixa_id,
-              req.usuario.empresaId,
-            ],
+        const pagamentosVenda =
+          await carregarPagamentosVenda(
+            client,
+            venda.id,
           )
+
+        const colunasPagamento = {
+          Dinheiro: 'vendas_dinheiro',
+          Pix: 'vendas_pix',
+          'Cartão de débito': 'vendas_debito',
+          'Cartão de crédito': 'vendas_credito',
+        }
+
+        // Compatibilidade com vendas antigas,
+        // realizadas antes da tabela venda_pagamentos.
+        if (pagamentosVenda.length === 0) {
+          const colunaCaixa =
+            colunasPagamento[venda.forma_pagamento]
+
+          if (colunaCaixa) {
+            await client.query(
+              `
+              UPDATE caixas
+              SET ${colunaCaixa} =
+                GREATEST(
+                  0,
+                  ${colunaCaixa} - $1
+                )
+              WHERE id = $2
+                AND empresa_id = $3
+              `,
+              [
+                Number(venda.total),
+                venda.caixa_id,
+                req.usuario.empresaId,
+              ],
+            )
+          }
+        } else {
+          for (const parcela of pagamentosVenda) {
+            const colunaCaixa =
+              colunasPagamento[parcela.formaPagamento]
+
+            if (!colunaCaixa) {
+              throw new Error(
+                'Forma de pagamento inválida no estorno.',
+              )
+            }
+
+            await client.query(
+              `
+              UPDATE caixas
+              SET ${colunaCaixa} =
+                GREATEST(
+                  0,
+                  ${colunaCaixa} - $1
+                )
+              WHERE id = $2
+                AND empresa_id = $3
+              `,
+              [
+                parcela.valor,
+                venda.caixa_id,
+                req.usuario.empresaId,
+              ],
+            )
+          }
         }
       }
 

@@ -1678,3 +1678,142 @@ body {
   min-height: 43px;
 }
 
+
+/* =========================================================
+   PAGAMENTO MISTO
+   ========================================================= */
+
+.ec-pagamento-misto {
+  margin-top: 10px;
+  border: 1px solid #d7e1eb;
+  border-radius: 10px;
+  background: #f8fbfe;
+  padding: 10px;
+}
+
+.ec-pagamento-misto-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+
+.ec-pagamento-misto-topo > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.ec-pagamento-misto-topo strong {
+  color: #102b44;
+  font-size: 14px;
+}
+
+.ec-pagamento-misto-topo span {
+  color: #718096;
+  font-size: 10px;
+}
+
+.ec-pagamento-misto-topo button {
+  border: 1px solid #b8c8d8;
+  background: #fff;
+  color: #174b78;
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ec-pagamento-misto-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.ec-pagamento-misto-campo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 9px;
+  border: 1px solid #d6e0ea;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ec-pagamento-misto-campo > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #18354f;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ec-pagamento-misto-campo > span b {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 6px;
+  background: #eaf3ff;
+  color: #1670c5;
+}
+
+.ec-pagamento-misto-campo > div {
+  display: flex;
+  align-items: center;
+  width: 112px;
+  border: 1px solid #c8d5e2;
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.ec-pagamento-misto-campo small {
+  padding-left: 7px;
+  color: #66788a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ec-pagamento-misto-campo input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  padding: 7px 7px 7px 4px;
+  background: transparent;
+  text-align: right;
+  color: #102b44;
+  font-weight: 800;
+}
+
+.ec-pagamento-misto-resumo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.ec-pagamento-misto-resumo > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: #eaf3ff;
+}
+
+.ec-pagamento-misto-resumo span {
+  color: #587089;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.ec-pagamento-misto-resumo strong {
+  color: #0b5fa5;
+  font-size: 14px;
+}

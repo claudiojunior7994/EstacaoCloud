@@ -435,3 +435,54 @@ ON venda_itens (venda_id);
 
 CREATE INDEX IF NOT EXISTS idx_venda_itens_produto
 ON venda_itens (produto_id);
+
+-- =========================================================
+-- PAGAMENTOS DAS VENDAS
+-- Permite múltiplas formas de pagamento na mesma venda
+-- =========================================================
+
+ALTER TABLE vendas
+DROP CONSTRAINT IF EXISTS chk_venda_pagamento;
+
+ALTER TABLE vendas
+ADD CONSTRAINT chk_venda_pagamento
+CHECK (
+    forma_pagamento IN (
+        'Pix',
+        'Dinheiro',
+        'Cartão de débito',
+        'Cartão de crédito',
+        'Pagamento misto'
+    )
+);
+
+CREATE TABLE IF NOT EXISTS venda_pagamentos (
+    id SERIAL PRIMARY KEY,
+
+    venda_id INTEGER NOT NULL
+        REFERENCES vendas(id)
+        ON DELETE CASCADE,
+
+    forma_pagamento VARCHAR(40) NOT NULL,
+
+    valor NUMERIC(12,2) NOT NULL,
+
+    criada_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_venda_pagamentos_forma
+        CHECK (
+            forma_pagamento IN (
+                'Pix',
+                'Dinheiro',
+                'Cartão de débito',
+                'Cartão de crédito'
+            )
+        ),
+
+    CONSTRAINT chk_venda_pagamentos_valor
+        CHECK (valor > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_venda_pagamentos_venda
+ON venda_pagamentos (venda_id);
+

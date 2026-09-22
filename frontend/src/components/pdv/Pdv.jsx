@@ -38,6 +38,14 @@ function Pdv({ usuario, token, onSair }) {
   const [processandoVenda, setProcessandoVenda] = useState(false)
   const [erroPagamento, setErroPagamento] = useState('')
 
+  // PAGAMENTO MISTO
+  const [pagamentosMistos, setPagamentosMistos] = useState({
+    Dinheiro: '',
+    Pix: '',
+    'Cartão de débito': '',
+    'Cartão de crédito': '',
+  })
+
   // SANGRIA
   const [modalSangria, setModalSangria] = useState(false)
   const [gestorAutorizado, setGestorAutorizado] = useState(false)
@@ -758,6 +766,48 @@ function Pdv({ usuario, token, onSair }) {
       }
     }
 
+    let pagamentosVenda = []
+
+    if (formaPagamento === 'Pagamento Misto') {
+      pagamentosVenda = Object.entries(pagamentosMistos)
+        .map(([forma, valor]) => ({
+          formaPagamento: forma,
+          valor: converterValor(valor),
+        }))
+        .filter((parcela) => parcela.valor > 0)
+
+      if (pagamentosVenda.length < 2) {
+        setErroPagamento(
+          'Informe pelo menos duas formas de pagamento.',
+        )
+        return
+      }
+
+      const totalPagamentosCentavos =
+        pagamentosVenda.reduce(
+          (soma, parcela) =>
+            soma + Math.round(parcela.valor * 100),
+          0,
+        )
+
+      const totalVendaCentavos =
+        Math.round(totalVenda * 100)
+
+      if (totalPagamentosCentavos !== totalVendaCentavos) {
+        const diferenca =
+          (totalVendaCentavos - totalPagamentosCentavos) / 100
+
+        setErroPagamento(
+          diferenca > 0
+            ? `Falta ${formatarMoeda(diferenca)} para completar o pagamento.`
+            : `O pagamento excede o total em ${formatarMoeda(
+                Math.abs(diferenca),
+              )}.`,
+        )
+        return
+      }
+    }
+
     setProcessandoVenda(true)
     setErroPagamento('')
 
@@ -779,6 +829,10 @@ function Pdv({ usuario, token, onSair }) {
             ? Number(clienteVenda.id)
             : null,
           formaPagamento,
+          pagamentos:
+            formaPagamento === 'Pagamento Misto'
+              ? pagamentosVenda
+              : undefined,
           desconto: 0,
           terminal: TERMINAL,
         }),
@@ -1724,6 +1778,7 @@ function Pdv({ usuario, token, onSair }) {
               <strong>{formatarMoeda(totalVenda)}</strong>
             </div>
 
+            {formaPagamento !== 'Pagamento Misto' && (
             <div className="ec-pagamento-grid">
               {[
                 { nome: 'Dinheiro', tipo: 'dinheiro', ativo: true },
@@ -1733,7 +1788,7 @@ function Pdv({ usuario, token, onSair }) {
                 { nome: 'Vale Alimentação', tipo: 'vale', ativo: false },
                 { nome: 'Vale Presente', tipo: 'presente', ativo: false },
                 { nome: 'Outras Formas', tipo: 'outras', ativo: false },
-                { nome: 'Pagamento Misto', tipo: 'misto', ativo: false },
+                { nome: 'Pagamento Misto', tipo: 'misto', ativo: true },
               ].map((opcao) => (
                 <button
                   key={opcao.nome}
@@ -1778,6 +1833,7 @@ function Pdv({ usuario, token, onSair }) {
                 </button>
               ))}
             </div>
+            )}
 
             {formaPagamento === 'Dinheiro' && (
               <div className="ec-pagamento-dinheiro">
@@ -1807,12 +1863,114 @@ function Pdv({ usuario, token, onSair }) {
               </div>
             )}
 
-            {formaPagamento && formaPagamento !== 'Dinheiro' && (
-              <div className="ec-pagamento-selecionado">
-                Forma selecionada:
-                <strong> {formaPagamento}</strong>
+            {formaPagamento === 'Pagamento Misto' && (
+              <div className="ec-pagamento-misto">
+                <div className="ec-pagamento-misto-topo">
+                  <div>
+                    <strong>Dividir pagamento</strong>
+                    <span>
+                      Informe pelo menos duas formas
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormaPagamento('')
+                      setPagamentosMistos({
+                        Dinheiro: '',
+                        Pix: '',
+                        'Cartão de débito': '',
+                        'Cartão de crédito': '',
+                      })
+                      setErroPagamento('')
+                    }}
+                  >
+                    Alterar forma
+                  </button>
+                </div>
+
+                <div className="ec-pagamento-misto-grid">
+                  {[
+                    ['Dinheiro', '$'],
+                    ['Pix', '◇'],
+                    ['Cartão de débito', 'D'],
+                    ['Cartão de crédito', 'C'],
+                  ].map(([forma, icone]) => (
+                    <label
+                      key={forma}
+                      className="ec-pagamento-misto-campo"
+                    >
+                      <span>
+                        <b>{icone}</b>
+                        {forma}
+                      </span>
+
+                      <div>
+                        <small>R$</small>
+
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={pagamentosMistos[forma]}
+                          onChange={(evento) => {
+                            setPagamentosMistos((atual) => ({
+                              ...atual,
+                              [forma]: evento.target.value,
+                            }))
+                            setErroPagamento('')
+                          }}
+                          placeholder="0,00"
+                        />
+                      </div>
+                    </label>
+                  ))}
+                </div>
+
+                <div className="ec-pagamento-misto-resumo">
+                  <div>
+                    <span>TOTAL INFORMADO</span>
+                    <strong>
+                      {formatarMoeda(
+                        Object.values(pagamentosMistos)
+                          .reduce(
+                            (soma, valor) =>
+                              soma + converterValor(valor),
+                            0,
+                          ),
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>RESTANTE</span>
+                    <strong>
+                      {formatarMoeda(
+                        Math.max(
+                          0,
+                          totalVenda -
+                            Object.values(pagamentosMistos)
+                              .reduce(
+                                (soma, valor) =>
+                                  soma + converterValor(valor),
+                                0,
+                              ),
+                        ),
+                      )}
+                    </strong>
+                  </div>
+                </div>
               </div>
             )}
+
+            {formaPagamento &&
+              formaPagamento !== 'Dinheiro' &&
+              formaPagamento !== 'Pagamento Misto' && (
+                <div className="ec-pagamento-selecionado">
+                  Forma selecionada:
+                  <strong> {formaPagamento}</strong>
+                </div>
+              )}
 
             {erroPagamento && (
               <div className="ec-modal-erro">{erroPagamento}</div>
