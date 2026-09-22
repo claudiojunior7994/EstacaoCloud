@@ -11,6 +11,8 @@ import RecebimentoMercadorias from './components/estoque/RecebimentoMercadorias'
 import './App.css'
 import LotesValidades from './components/estoque/LotesValidades'
 
+const API_URL = 'http://localhost:3000'
+
 function App() {
   const [acessoPlataforma, setAcessoPlataforma] = useState(false)
 
@@ -260,7 +262,188 @@ function App() {
   const [usuarioEmEdicao, setUsuarioEmEdicao] = useState(null)
   const [novoUsuarioSistema, setNovoUsuarioSistema] = useState(usuarioVazio)
 
+  // PREFERÊNCIAS
+  const [mostrarPreferencias, setMostrarPreferencias] = useState(false)
+  const [carregandoPreferencias, setCarregandoPreferencias] = useState(false)
+  const [salvandoPreferencias, setSalvandoPreferencias] = useState(false)
+
+  const [preferencias, setPreferencias] = useState({
+    permiteEstoqueNegativo: false,
+    mensagemComprovante: '',
+  })
+
+  async function abrirPreferencias() {
+    setMostrarUsuarios(false)
+    setMostrarTef(false)
+    setMostrarDadosFiscais(false)
+    setMostrarPreferencias(true)
+    setCarregandoPreferencias(true)
+
+    try {
+      const resposta = await fetch(
+        `${API_URL}/api/empresas/minha-empresa`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
+
+      const dados = await resposta.json()
+
+      if (!resposta.ok) {
+        throw new Error(
+          dados.erro || 'Não foi possível carregar as preferências.',
+        )
+      }
+
+      const empresa = dados.empresa || {}
+
+      setPreferencias({
+        permiteEstoqueNegativo:
+          Boolean(empresa.permite_estoque_negativo),
+        mensagemComprovante:
+          empresa.mensagem_comprovante || '',
+      })
+    } catch (erro) {
+      alert(erro.message)
+    } finally {
+      setCarregandoPreferencias(false)
+    }
+  }
+
+  async function salvarPreferencias() {
+    setSalvandoPreferencias(true)
+
+    try {
+      const resposta = await fetch(
+        `${API_URL}/api/empresas/minha-empresa`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(preferencias),
+        },
+      )
+
+      const dados = await resposta.json()
+
+      if (!resposta.ok) {
+        throw new Error(
+          dados.erro || 'Não foi possível salvar as preferências.',
+        )
+      }
+
+      alert('Preferências salvas com sucesso.')
+    } catch (erro) {
+      alert(erro.message)
+    } finally {
+      setSalvandoPreferencias(false)
+    }
+  }
+
   // TEF / CARTÕES
+  // DADOS FISCAIS / NFC-e
+  const [mostrarDadosFiscais, setMostrarDadosFiscais] = useState(false)
+  const [carregandoDadosFiscais, setCarregandoDadosFiscais] = useState(false)
+  const [salvandoDadosFiscais, setSalvandoDadosFiscais] = useState(false)
+
+  const [dadosFiscais, setDadosFiscais] = useState({
+    cnpj: '',
+    inscricaoEstadual: '',
+    regimeTributario: '',
+    codigoMunicipioIbge: '',
+    nfceHabilitada: false,
+    nfceAmbiente: 'homologacao',
+    nfceSerie: 1,
+    nfceProximoNumero: 1,
+    nfceCscId: '',
+    nfceCsc: '',
+  })
+
+  async function carregarDadosFiscais() {
+    setCarregandoDadosFiscais(true)
+
+    try {
+      const resposta = await fetch(
+        `${API_URL}/api/empresas/minha-empresa`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
+
+      const dados = await resposta.json()
+
+      if (!resposta.ok) {
+        throw new Error(
+          dados.erro || 'Não foi possível carregar os dados fiscais.',
+        )
+      }
+
+      const empresa = dados.empresa || {}
+
+      setDadosFiscais({
+        cnpj: empresa.cnpj || '',
+        inscricaoEstadual: empresa.inscricao_estadual || '',
+        regimeTributario: empresa.regime_tributario || '',
+        codigoMunicipioIbge: empresa.codigo_municipio_ibge || '',
+        nfceHabilitada: Boolean(empresa.nfce_habilitada),
+        nfceAmbiente: empresa.nfce_ambiente || 'homologacao',
+        nfceSerie: empresa.nfce_serie || 1,
+        nfceProximoNumero: empresa.nfce_proximo_numero || 1,
+        nfceCscId: empresa.nfce_csc_id || '',
+        nfceCsc: empresa.nfce_csc || '',
+      })
+    } catch (erro) {
+      alert(erro.message)
+    } finally {
+      setCarregandoDadosFiscais(false)
+    }
+  }
+
+  async function abrirDadosFiscais() {
+    setMostrarUsuarios(false)
+    setMostrarTef(false)
+    setMostrarDadosFiscais(true)
+    await carregarDadosFiscais()
+  }
+
+  async function salvarDadosFiscais() {
+    setSalvandoDadosFiscais(true)
+
+    try {
+      const resposta = await fetch(
+        `${API_URL}/api/empresas/minha-empresa`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(dadosFiscais),
+        },
+      )
+
+      const dados = await resposta.json()
+
+      if (!resposta.ok) {
+        throw new Error(
+          dados.erro || 'Não foi possível salvar os dados fiscais.',
+        )
+      }
+
+      alert('Dados fiscais salvos com sucesso.')
+    } catch (erro) {
+      alert(erro.message)
+    } finally {
+      setSalvandoDadosFiscais(false)
+    }
+  }
+
   const [mostrarTef, setMostrarTef] = useState(false)
   const [carregandoTef, setCarregandoTef] = useState(false)
   const [salvandoTef, setSalvandoTef] = useState(false)
@@ -586,6 +769,16 @@ function App() {
     plu: '',
     fornecedorId: '',
     etiquetaAtiva: true,
+
+    // DADOS FISCAIS
+    ncm: '',
+    cest: '',
+    origemMercadoria: '',
+    cstIcms: '',
+    csosn: '',
+    cfop: '',
+    cstIbsCbs: '',
+    cclassTrib: '',
   }
 
   const [novoProduto, setNovoProduto] = useState(produtoVazio)
@@ -628,6 +821,15 @@ function App() {
               '',
             estoque: Number(produto.estoque || 0),
             estoqueMinimo: Number(produto.estoqueMinimo || 0),
+
+            ncm: produto.ncm || '',
+            cest: produto.cest || '',
+            origemMercadoria: produto.origemMercadoria || '',
+            cstIcms: produto.cstIcms || '',
+            csosn: produto.csosn || '',
+            cfop: produto.cfop || '',
+            cstIbsCbs: produto.cstIbsCbs || '',
+            cclassTrib: produto.cclassTrib || '',
           })),
         )
       } catch (erro) {
@@ -1099,6 +1301,29 @@ function App() {
       unidade: novoProduto.unidade || 'UN',
       pesavel: Boolean(novoProduto.pesavel),
       plu: String(novoProduto.plu || '').trim(),
+
+      // DADOS FISCAIS
+      ncm: String(novoProduto.ncm || '').trim(),
+      cest: String(novoProduto.cest || '').trim(),
+      origemMercadoria: String(
+        novoProduto.origemMercadoria || '',
+      ).trim(),
+      cstIcms: String(
+        novoProduto.cstIcms || '',
+      ).trim(),
+      csosn: String(
+        novoProduto.csosn || '',
+      ).trim(),
+      cfop: String(
+        novoProduto.cfop || '',
+      ).trim(),
+      cstIbsCbs: String(
+        novoProduto.cstIbsCbs || '',
+      ).trim(),
+      cclassTrib: String(
+        novoProduto.cclassTrib || '',
+      ).trim(),
+
       fornecedorId: novoProduto.fornecedorId
         ? Number(novoProduto.fornecedorId)
         : null,
@@ -1143,6 +1368,23 @@ function App() {
         unidade: dados.produto.unidade || 'UN',
         pesavel: Boolean(dados.produto.pesavel),
         plu: dados.produto.plu || '',
+
+        // DADOS FISCAIS
+        ncm: dados.produto.ncm || '',
+        cest: dados.produto.cest || '',
+        origemMercadoria:
+          dados.produto.origemMercadoria || '',
+        cstIcms:
+          dados.produto.cstIcms || '',
+        csosn:
+          dados.produto.csosn || '',
+        cfop:
+          dados.produto.cfop || '',
+        cstIbsCbs:
+          dados.produto.cstIbsCbs || '',
+        cclassTrib:
+          dados.produto.cclassTrib || '',
+
         fornecedorId:
           dados.produto.fornecedorId ??
           dados.produto.fornecedor_id ??
@@ -1201,6 +1443,17 @@ function App() {
       unidade: produto.unidade || 'UN',
       pesavel: Boolean(produto.pesavel),
       plu: produto.plu || '',
+
+      // DADOS FISCAIS
+      ncm: produto.ncm || '',
+      cest: produto.cest || '',
+      origemMercadoria: produto.origemMercadoria || '',
+      cstIcms: produto.cstIcms || '',
+      csosn: produto.csosn || '',
+      cfop: produto.cfop || '',
+      cstIbsCbs: produto.cstIbsCbs || '',
+      cclassTrib: produto.cclassTrib || '',
+
       fornecedorId: String(
         produto.fornecedorId ??
         produto.fornecedor_id ??
@@ -1864,6 +2117,177 @@ function App() {
               value={novoProduto.estoqueMinimo}
               onChange={alterarCampoProduto}
             />
+          </div>
+
+          <div
+            style={{
+              gridColumn: '1 / -1',
+              marginTop: '18px',
+              padding: '18px',
+              border: '1px solid #303c4b',
+              borderRadius: '8px',
+              background: '#0b121a',
+            }}
+          >
+            <div style={{ marginBottom: '16px' }}>
+              <p className="eyebrow">FISCAL</p>
+              <h4 style={{ margin: '4px 0 0' }}>
+                Dados fiscais
+              </h4>
+              <p
+                className="welcome-text"
+                style={{ marginTop: '6px', marginBottom: 0 }}
+              >
+                Informe a classificação fiscal definida para este produto.
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: '14px',
+              }}
+            >
+              <div className="form-group">
+                <label htmlFor="ncm">NCM</label>
+                <input
+                  id="ncm"
+                  name="ncm"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={8}
+                  placeholder="Ex.: 10063021"
+                  value={novoProduto.ncm}
+                  onChange={alterarCampoProduto}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="cest">CEST</label>
+                <input
+                  id="cest"
+                  name="cest"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={7}
+                  placeholder="Ex.: 1700100"
+                  value={novoProduto.cest}
+                  onChange={alterarCampoProduto}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="origemMercadoria">
+                  Origem da mercadoria
+                </label>
+                <select
+                  id="origemMercadoria"
+                  name="origemMercadoria"
+                  value={novoProduto.origemMercadoria}
+                  onChange={alterarCampoProduto}
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    padding: '0 11px',
+                    border: '1px solid #303c4b',
+                    borderRadius: '5px',
+                    outline: 'none',
+                    color: '#ffffff',
+                    background: '#0e151e',
+                  }}
+                >
+                  <option value="">Selecione...</option>
+                  <option value="0">
+                    0 - Nacional
+                  </option>
+                  <option value="1">
+                    1 - Estrangeira - importação direta
+                  </option>
+                  <option value="2">
+                    2 - Estrangeira - adquirida no mercado interno
+                  </option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="cfop">CFOP</label>
+                <input
+                  id="cfop"
+                  name="cfop"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="Ex.: 5102"
+                  value={novoProduto.cfop}
+                  onChange={alterarCampoProduto}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="cstIcms">
+                  CST ICMS
+                </label>
+                <input
+                  id="cstIcms"
+                  name="cstIcms"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={3}
+                  placeholder="Ex.: 00"
+                  value={novoProduto.cstIcms}
+                  onChange={alterarCampoProduto}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="csosn">
+                  CSOSN
+                </label>
+                <input
+                  id="csosn"
+                  name="csosn"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="Ex.: 102"
+                  value={novoProduto.csosn}
+                  onChange={alterarCampoProduto}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="cstIbsCbs">
+                  CST IBS/CBS
+                </label>
+                <input
+                  id="cstIbsCbs"
+                  name="cstIbsCbs"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={3}
+                  placeholder="Conforme classificação fiscal"
+                  value={novoProduto.cstIbsCbs}
+                  onChange={alterarCampoProduto}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="cclassTrib">
+                  cClassTrib IBS/CBS
+                </label>
+                <input
+                  id="cclassTrib"
+                  name="cclassTrib"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="Código da classificação"
+                  value={novoProduto.cclassTrib}
+                  onChange={alterarCampoProduto}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="form-actions">
@@ -3631,7 +4055,14 @@ function App() {
               👥 Usuários e permissões
             </button>
 
-            <button type="button">🧾 Dados fiscais</button>
+            <button
+              type="button"
+              onClick={podeAdministrarUsuarios ? abrirDadosFiscais : undefined}
+              disabled={!podeAdministrarUsuarios}
+              title={!podeAdministrarUsuarios ? 'Acesso permitido para administrador' : ''}
+            >
+              🧾 Dados fiscais
+            </button>
 
             <button
               type="button"
@@ -3650,9 +4081,299 @@ function App() {
               💳 TEF / Cartões
             </button>
 
-            <button type="button">🔔 Preferências</button>
+            <button
+              type="button"
+              onClick={podeAdministrarUsuarios ? abrirPreferencias : undefined}
+              disabled={!podeAdministrarUsuarios}
+              title={!podeAdministrarUsuarios ? 'Acesso permitido para administrador' : ''}
+            >
+              🔔 Preferências
+            </button>
           </div>
         </article>
+
+        {mostrarPreferencias && podeAdministrarUsuarios && (
+          <article className="panel product-form-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">CONFIGURAÇÕES GERAIS</p>
+                <h3>Preferências</h3>
+              </div>
+
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setMostrarPreferencias(false)}
+              >
+                Fechar
+              </button>
+            </div>
+
+            <p className="welcome-text" style={{ marginBottom: '18px' }}>
+              Defina comportamentos gerais do EstaçãoCloud para este estabelecimento.
+            </p>
+
+            {carregandoPreferencias ? (
+              <p>Carregando preferências...</p>
+            ) : (
+              <div className="product-form">
+                <div className="form-group">
+                  <label>Estoque negativo</label>
+
+                  <select
+                    value={preferencias.permiteEstoqueNegativo ? 'sim' : 'nao'}
+                    onChange={(e) =>
+                      setPreferencias((atual) => ({
+                        ...atual,
+                        permiteEstoqueNegativo: e.target.value === 'sim',
+                      }))
+                    }
+                  >
+                    <option value="nao">Não permitir</option>
+                    <option value="sim">Permitir</option>
+                  </select>
+                </div>
+
+                <div className="form-group form-group-large">
+                  <label>Mensagem no comprovante</label>
+
+                  <input
+                    type="text"
+                    value={preferencias.mensagemComprovante}
+                    onChange={(e) =>
+                      setPreferencias((atual) => ({
+                        ...atual,
+                        mensagemComprovante: e.target.value,
+                      }))
+                    }
+                    placeholder="Ex.: Obrigado pela preferência!"
+                    maxLength="200"
+                  />
+                </div>
+
+                <div
+                  style={{
+                    gridColumn: '1 / -1',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={salvarPreferencias}
+                    disabled={salvandoPreferencias}
+                  >
+                    {salvandoPreferencias
+                      ? 'Salvando...'
+                      : 'Salvar preferências'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </article>
+        )}
+
+        {mostrarDadosFiscais && podeAdministrarUsuarios && (
+          <article className="panel product-form-panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">CONFIGURAÇÃO FISCAL</p>
+                <h3>Dados Fiscais / NFC-e</h3>
+              </div>
+
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setMostrarDadosFiscais(false)}
+              >
+                Fechar
+              </button>
+            </div>
+
+            <p className="welcome-text" style={{ marginBottom: '18px' }}>
+              Configure os dados fiscais do estabelecimento e os parâmetros da NFC-e.
+            </p>
+
+            {carregandoDadosFiscais ? (
+              <p>Carregando dados fiscais...</p>
+            ) : (
+              <div className="product-form">
+                <div className="form-group">
+                  <label>CNPJ</label>
+                  <input
+                    type="text"
+                    value={dadosFiscais.cnpj}
+                    onChange={(e) =>
+                      setDadosFiscais((atual) => ({
+                        ...atual,
+                        cnpj: e.target.value,
+                      }))
+                    }
+                    placeholder="00.000.000/0000-00"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Inscrição Estadual</label>
+                  <input
+                    type="text"
+                    value={dadosFiscais.inscricaoEstadual}
+                    onChange={(e) =>
+                      setDadosFiscais((atual) => ({
+                        ...atual,
+                        inscricaoEstadual: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Regime tributário</label>
+                  <select
+                    value={dadosFiscais.regimeTributario}
+                    onChange={(e) =>
+                      setDadosFiscais((atual) => ({
+                        ...atual,
+                        regimeTributario: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    <option value="simples_nacional">Simples Nacional</option>
+                    <option value="simples_excesso">Simples Nacional — excesso de sublimite</option>
+                    <option value="regime_normal">Regime Normal</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Código município IBGE</label>
+                  <input
+                    type="text"
+                    value={dadosFiscais.codigoMunicipioIbge}
+                    onChange={(e) =>
+                      setDadosFiscais((atual) => ({
+                        ...atual,
+                        codigoMunicipioIbge: e.target.value,
+                      }))
+                    }
+                    placeholder="Ex.: 3550308"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>NFC-e</label>
+                  <select
+                    value={dadosFiscais.nfceHabilitada ? 'sim' : 'nao'}
+                    onChange={(e) =>
+                      setDadosFiscais((atual) => ({
+                        ...atual,
+                        nfceHabilitada: e.target.value === 'sim',
+                      }))
+                    }
+                  >
+                    <option value="nao">Desativada</option>
+                    <option value="sim">Ativada</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Ambiente NFC-e</label>
+                  <select
+                    value={dadosFiscais.nfceAmbiente}
+                    onChange={(e) =>
+                      setDadosFiscais((atual) => ({
+                        ...atual,
+                        nfceAmbiente: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="homologacao">Homologação</option>
+                    <option value="producao">Produção</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Série NFC-e</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={dadosFiscais.nfceSerie}
+                    onChange={(e) =>
+                      setDadosFiscais((atual) => ({
+                        ...atual,
+                        nfceSerie: Number(e.target.value),
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Próximo número NFC-e</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={dadosFiscais.nfceProximoNumero}
+                    onChange={(e) =>
+                      setDadosFiscais((atual) => ({
+                        ...atual,
+                        nfceProximoNumero: Number(e.target.value),
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>ID CSC</label>
+                  <input
+                    type="text"
+                    value={dadosFiscais.nfceCscId}
+                    onChange={(e) =>
+                      setDadosFiscais((atual) => ({
+                        ...atual,
+                        nfceCscId: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="form-group form-group-large">
+                  <label>CSC — Código de Segurança do Contribuinte</label>
+                  <input
+                    type="password"
+                    value={dadosFiscais.nfceCsc}
+                    onChange={(e) =>
+                      setDadosFiscais((atual) => ({
+                        ...atual,
+                        nfceCsc: e.target.value,
+                      }))
+                    }
+                    autoComplete="off"
+                  />
+                </div>
+
+                <div
+                  style={{
+                    gridColumn: '1 / -1',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={salvarDadosFiscais}
+                    disabled={salvandoDadosFiscais}
+                  >
+                    {salvandoDadosFiscais
+                      ? 'Salvando...'
+                      : 'Salvar dados fiscais'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </article>
+        )}
 
         {mostrarTef && podeAdministrarUsuarios && (
           <article className="panel product-form-panel">

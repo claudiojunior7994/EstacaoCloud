@@ -17,6 +17,76 @@ function numero(valor) {
   return convertido
 }
 
+function validarDocumentoConsumidor(valor) {
+  const documento = String(valor || '').replace(/\D/g, '')
+
+  if (!documento) {
+    return ''
+  }
+
+  if (/^(\d)\1+$/.test(documento)) {
+    return null
+  }
+
+  if (documento.length === 11) {
+    const calcularDigito = (base, pesoInicial) => {
+      let soma = 0
+
+      for (let i = 0; i < base.length; i += 1) {
+        soma += Number(base[i]) * (pesoInicial - i)
+      }
+
+      const resto = (soma * 10) % 11
+      return resto === 10 ? 0 : resto
+    }
+
+    const primeiro = calcularDigito(documento.slice(0, 9), 10)
+    const segundo = calcularDigito(documento.slice(0, 10), 11)
+
+    if (
+      primeiro !== Number(documento[9]) ||
+      segundo !== Number(documento[10])
+    ) {
+      return null
+    }
+
+    return documento
+  }
+
+  if (documento.length === 14) {
+    const calcularDigito = (base) => {
+      let peso = base.length - 7
+      let soma = 0
+
+      for (const digito of base) {
+        soma += Number(digito) * peso
+        peso -= 1
+
+        if (peso === 1) {
+          peso = 9
+        }
+      }
+
+      const resto = soma % 11
+      return resto < 2 ? 0 : 11 - resto
+    }
+
+    const primeiro = calcularDigito(documento.slice(0, 12))
+    const segundo = calcularDigito(documento.slice(0, 13))
+
+    if (
+      primeiro !== Number(documento[12]) ||
+      segundo !== Number(documento[13])
+    ) {
+      return null
+    }
+
+    return documento
+  }
+
+  return null
+}
+
 function mapItem(r) {
   return {
     id: r.id,
@@ -46,6 +116,7 @@ function mapVenda(r, itens = []) {
     total: Number(r.total || 0),
 
     formaPagamento: r.forma_pagamento,
+    documentoConsumidor: r.documento_consumidor || '',
 
     status: r.status,
     criadaEm: r.criada_em,
@@ -158,6 +229,7 @@ router.post(
         pagamentos = [],
         desconto = 0,
         terminal = '001',
+        documentoConsumidor = '',
       } = req.body
 
       if (
@@ -172,6 +244,15 @@ router.post(
       const terminalNormalizado = String(
         terminal || '001',
       ).trim()
+
+      const documentoConsumidorNormalizado =
+        validarDocumentoConsumidor(documentoConsumidor)
+
+      if (documentoConsumidorNormalizado === null) {
+        return res.status(400).json({
+          erro: 'CPF/CNPJ do consumidor inválido.',
+        })
+      }
 
       const pagamento = String(
         formaPagamento || '',
@@ -416,6 +497,44 @@ router.post(
           precoUnitario,
           subtotal:
             quantidade * precoUnitario,
+
+          // Snapshot fiscal do produto no momento da venda
+          codigoBarras: produto.codigo_barras || null,
+          ncm: produto.ncm || null,
+          cest: produto.cest || null,
+          origemMercadoria:
+            produto.origem_mercadoria || null,
+          cstIcms: produto.cst_icms || null,
+          csosn: produto.csosn || null,
+          cfop: produto.cfop || null,
+          cstIbsCbs: produto.cst_ibs_cbs || null,
+          cclassTrib: produto.cclass_trib || null,
+          cstPis: produto.cst_pis || null,
+          aliquotaPis:
+            produto.aliquota_pis == null
+              ? null
+              : Number(produto.aliquota_pis),
+          cstCofins: produto.cst_cofins || null,
+          aliquotaCofins:
+            produto.aliquota_cofins == null
+              ? null
+              : Number(produto.aliquota_cofins),
+          aliquotaIcms:
+            produto.aliquota_icms == null
+              ? null
+              : Number(produto.aliquota_icms),
+          aliquotaIbsUf:
+            produto.aliquota_ibs_uf == null
+              ? null
+              : Number(produto.aliquota_ibs_uf),
+          aliquotaIbsMunicipal:
+            produto.aliquota_ibs_municipal == null
+              ? null
+              : Number(produto.aliquota_ibs_municipal),
+          aliquotaCbs:
+            produto.aliquota_cbs == null
+              ? null
+              : Number(produto.aliquota_cbs),
         })
       }
 
@@ -685,6 +804,7 @@ router.post(
             desconto,
             total,
             forma_pagamento,
+            documento_consumidor,
             status,
             criada_em
           )
@@ -698,6 +818,7 @@ router.post(
             $7,
             $8,
             $9,
+            $10,
             'concluida',
             CURRENT_TIMESTAMP
           )
@@ -713,10 +834,144 @@ router.post(
             descontoNormalizado,
             total,
             pagamento,
+            documentoConsumidorNormalizado || null,
           ],
         )
 
       const venda = resultadoVenda.rows[0]
+
+      // ---------------------------------------------------------
+      // REGISTRO FISCAL NFC-e
+      // Reserva série/número somente quando a NFC-e estiver
+      // habilitada para a empresa.
+      // A autorização da SEFAZ ocorre em etapa própria.
+      // ---------------------------------------------------------
+      let nfce = null
+
+      const resultadoEmpresaFiscal =
+        await client.query(
+          `
+          SELECT
+            nome,
+            cnpj,
+            inscricao_estadual,
+            estado,
+            cidade,
+            codigo_municipio_ibge,
+            regime_tributario,
+            nfce_habilitada,
+            nfce_ambiente,
+            nfce_serie,
+            nfce_proximo_numero,
+            nfce_csc_id,
+            nfce_csc
+          FROM empresas
+          WHERE id = $1
+          FOR UPDATE
+          `,
+          [req.usuario.empresaId],
+        )
+
+      const empresaFiscal =
+        resultadoEmpresaFiscal.rows[0]
+
+      if (empresaFiscal?.nfce_habilitada) {
+        const camposObrigatorios = [
+          ['CNPJ', empresaFiscal.cnpj],
+          ['Inscrição Estadual', empresaFiscal.inscricao_estadual],
+          ['UF', empresaFiscal.estado],
+          ['Cidade', empresaFiscal.cidade],
+          [
+            'Código IBGE do município',
+            empresaFiscal.codigo_municipio_ibge,
+          ],
+          [
+            'Regime tributário',
+            empresaFiscal.regime_tributario,
+          ],
+        ]
+
+        const camposAusentes =
+          camposObrigatorios
+            .filter(([, valor]) => !String(valor || '').trim())
+            .map(([nome]) => nome)
+
+        if (camposAusentes.length > 0) {
+          throw new Error(
+            'NFC-e habilitada, mas faltam dados fiscais: ' +
+              camposAusentes.join(', ') +
+              '.',
+          )
+        }
+
+        if (
+          !['homologacao', 'producao'].includes(
+            String(empresaFiscal.nfce_ambiente || ''),
+          )
+        ) {
+          throw new Error(
+            'Ambiente da NFC-e deve ser homologacao ou producao.',
+          )
+        }
+
+        const serieNfce =
+          Number(empresaFiscal.nfce_serie)
+
+        const numeroNfce =
+          Number(empresaFiscal.nfce_proximo_numero)
+
+        if (
+          !Number.isInteger(serieNfce) ||
+          serieNfce <= 0 ||
+          !Number.isInteger(numeroNfce) ||
+          numeroNfce <= 0
+        ) {
+          throw new Error(
+            'Série ou próximo número da NFC-e inválido.',
+          )
+        }
+
+        const resultadoNfce =
+          await client.query(
+            `
+            INSERT INTO nfce (
+              empresa_id,
+              venda_id,
+              ambiente,
+              serie,
+              numero,
+              status,
+              documento_consumidor
+            )
+            VALUES (
+              $1, $2, $3, $4, $5, 'pendente', $6
+            )
+            RETURNING *
+            `,
+            [
+              req.usuario.empresaId,
+              venda.id,
+              empresaFiscal.nfce_ambiente || 'homologacao',
+              serieNfce,
+              numeroNfce,
+              documentoConsumidorNormalizado || null,
+            ],
+          )
+
+        nfce = resultadoNfce.rows[0]
+
+        await client.query(
+          `
+          UPDATE empresas
+          SET
+            nfce_proximo_numero =
+              nfce_proximo_numero + 1,
+            atualizado_em = CURRENT_TIMESTAMP
+          WHERE id = $1
+          `,
+          [req.usuario.empresaId],
+        )
+      }
 
       if (transacoesTefAprovadas.length > 0) {
         await client.query(
@@ -744,15 +999,31 @@ router.post(
             nome_produto,
             quantidade,
             preco_unitario,
-            subtotal
+            subtotal,
+            codigo_barras,
+            ncm,
+            cest,
+            origem_mercadoria,
+            cst_icms,
+            csosn,
+            cfop,
+            cst_ibs_cbs,
+            cclass_trib,
+            cst_pis,
+            aliquota_pis,
+            cst_cofins,
+            aliquota_cofins,
+            aliquota_icms,
+            aliquota_ibs_uf,
+            aliquota_ibs_municipal,
+            aliquota_cbs
           )
           VALUES (
-            $1,
-            $2,
-            $3,
-            $4,
-            $5,
-            $6
+            $1, $2, $3, $4, $5,
+            $6, $7, $8, $9, $10,
+            $11, $12, $13, $14, $15,
+            $16, $17, $18, $19, $20,
+            $21, $22, $23
           )
           `,
           [
@@ -762,6 +1033,23 @@ router.post(
             item.quantidade,
             item.precoUnitario,
             item.subtotal,
+            item.codigoBarras,
+            item.ncm,
+            item.cest,
+            item.origemMercadoria,
+            item.cstIcms,
+            item.csosn,
+            item.cfop,
+            item.cstIbsCbs,
+            item.cclassTrib,
+            item.cstPis,
+            item.aliquotaPis,
+            item.cstCofins,
+            item.aliquotaCofins,
+            item.aliquotaIcms,
+            item.aliquotaIbsUf,
+            item.aliquotaIbsMunicipal,
+            item.aliquotaCbs,
           ],
         )
 
@@ -889,6 +1177,17 @@ router.post(
           venda,
           itensNormalizados,
         ),
+        nfce: nfce
+          ? {
+              id: nfce.id,
+              serie: nfce.serie,
+              numero: nfce.numero,
+              ambiente: nfce.ambiente,
+              status: nfce.status,
+              documentoConsumidor:
+                nfce.documento_consumidor || '',
+            }
+          : null,
       })
     } catch (erro) {
       await client.query('ROLLBACK')

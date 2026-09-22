@@ -40,6 +40,9 @@ function Pdv({ usuario, token, onSair }) {
   const [mensagemTef, setMensagemTef] = useState('')
   const [erroPagamento, setErroPagamento] = useState('')
 
+  // DOCUMENTO DO CONSUMIDOR / NFC-e
+  const [documentoConsumidor, setDocumentoConsumidor] = useState('')
+
   // PAGAMENTO MISTO
   const [pagamentosMistos, setPagamentosMistos] = useState({
     Dinheiro: '',
@@ -736,6 +739,7 @@ function Pdv({ usuario, token, onSair }) {
 
     setFormaPagamento('')
     setValorRecebido('')
+    setDocumentoConsumidor('')
     setErroPagamento('')
     setModalPagamento(true)
   }
@@ -748,6 +752,7 @@ function Pdv({ usuario, token, onSair }) {
     setModalPagamento(false)
     setFormaPagamento('')
     setValorRecebido('')
+    setDocumentoConsumidor('')
     setErroPagamento('')
     setProcessandoTef(false)
     setMensagemTef('')
@@ -866,6 +871,8 @@ function Pdv({ usuario, token, onSair }) {
               : undefined,
           desconto: 0,
           terminal: TERMINAL,
+          documentoConsumidor:
+            documentoConsumidor.replace(/\D/g, ''),
         }),
       })
 
@@ -910,6 +917,7 @@ function Pdv({ usuario, token, onSair }) {
       setModalPagamento(false)
       setFormaPagamento('')
       setValorRecebido('')
+      setDocumentoConsumidor('')
       setErroPagamento('')
 
       setItens([])
@@ -1807,6 +1815,33 @@ function Pdv({ usuario, token, onSair }) {
             <div className="ec-pagamento-total">
               <span>TOTAL DA VENDA</span>
               <strong>{formatarMoeda(totalVenda)}</strong>
+            </div>
+
+            <div className="ec-documento-consumidor">
+              <label htmlFor="documentoConsumidor">
+                CPF/CNPJ na nota
+              </label>
+
+              <input
+                id="documentoConsumidor"
+                type="text"
+                inputMode="numeric"
+                maxLength={18}
+                placeholder="Opcional — digite CPF ou CNPJ"
+                value={documentoConsumidor}
+                onChange={(event) => {
+                  const valor = event.target.value
+                    .replace(/\D/g, '')
+                    .slice(0, 14)
+
+                  setDocumentoConsumidor(valor)
+                }}
+                disabled={processandoVenda}
+              />
+
+              <small>
+                Deixe em branco caso o consumidor não queira informar.
+              </small>
             </div>
 
             {formaPagamento !== 'Pagamento Misto' && (

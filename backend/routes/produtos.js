@@ -59,6 +59,33 @@ function mapProduto(r) {
 
     categoria: r.categoria || '',
 
+    // FISCAL
+    ncm: r.ncm || '',
+    cest: r.cest || '',
+    origemMercadoria: r.origem_mercadoria || '',
+    cstIcms: r.cst_icms || '',
+    csosn: r.csosn || '',
+    cfop: r.cfop || '',
+    cstIbsCbs: r.cst_ibs_cbs || '',
+    cclassTrib: r.cclass_trib || '',
+
+    cstPis: r.cst_pis || '',
+    aliquotaPis:
+      r.aliquota_pis == null ? null : Number(r.aliquota_pis),
+    cstCofins: r.cst_cofins || '',
+    aliquotaCofins:
+      r.aliquota_cofins == null ? null : Number(r.aliquota_cofins),
+    aliquotaIcms:
+      r.aliquota_icms == null ? null : Number(r.aliquota_icms),
+    aliquotaIbsUf:
+      r.aliquota_ibs_uf == null ? null : Number(r.aliquota_ibs_uf),
+    aliquotaIbsMunicipal:
+      r.aliquota_ibs_municipal == null
+        ? null
+        : Number(r.aliquota_ibs_municipal),
+    aliquotaCbs:
+      r.aliquota_cbs == null ? null : Number(r.aliquota_cbs),
+
     unidade: r.unidade || 'UN',
     pesavel: Boolean(r.pesavel),
     plu: r.plu || '',
@@ -330,6 +357,50 @@ router.post(
         req.body.categoria,
       )
 
+      // DADOS FISCAIS
+      const ncm = texto(req.body.ncm)
+      const cest = texto(req.body.cest)
+      const origemMercadoria = texto(
+        req.body.origemMercadoria,
+      )
+      const cstIcms = texto(req.body.cstIcms)
+      const csosn = texto(req.body.csosn)
+      const cfop = texto(req.body.cfop)
+      const cstIbsCbs = texto(req.body.cstIbsCbs)
+      const cclassTrib = texto(req.body.cclassTrib)
+      const cstPis = texto(req.body.cstPis)
+      const aliquotaPis =
+        req.body.aliquotaPis === '' ||
+        req.body.aliquotaPis == null
+          ? null
+          : Number(req.body.aliquotaPis)
+      const cstCofins = texto(req.body.cstCofins)
+      const aliquotaCofins =
+        req.body.aliquotaCofins === '' ||
+        req.body.aliquotaCofins == null
+          ? null
+          : Number(req.body.aliquotaCofins)
+      const aliquotaIcms =
+        req.body.aliquotaIcms === '' ||
+        req.body.aliquotaIcms == null
+          ? null
+          : Number(req.body.aliquotaIcms)
+      const aliquotaIbsUf =
+        req.body.aliquotaIbsUf === '' ||
+        req.body.aliquotaIbsUf == null
+          ? null
+          : Number(req.body.aliquotaIbsUf)
+      const aliquotaIbsMunicipal =
+        req.body.aliquotaIbsMunicipal === '' ||
+        req.body.aliquotaIbsMunicipal == null
+          ? null
+          : Number(req.body.aliquotaIbsMunicipal)
+      const aliquotaCbs =
+        req.body.aliquotaCbs === '' ||
+        req.body.aliquotaCbs == null
+          ? null
+          : Number(req.body.aliquotaCbs)
+
       const unidade = texto(
         req.body.unidade || 'UN',
       ).toUpperCase()
@@ -466,6 +537,22 @@ router.post(
           fornecedor,
           fornecedor_id,
           categoria,
+          ncm,
+          cest,
+          origem_mercadoria,
+          cst_icms,
+          csosn,
+          cfop,
+          cst_ibs_cbs,
+          cclass_trib,
+          cst_pis,
+          aliquota_pis,
+          cst_cofins,
+          aliquota_cofins,
+          aliquota_icms,
+          aliquota_ibs_uf,
+          aliquota_ibs_municipal,
+          aliquota_cbs,
           unidade,
           pesavel,
           plu,
@@ -477,6 +564,8 @@ router.post(
         VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,
           $10,$11,$12,$13,$14,$15,$16,
+          $17,$18,$19,$20,$21,$22,$23,$24,
+          $25,$26,$27,$28,$29,$30,$31,$32,
           TRUE
         )
         RETURNING *
@@ -492,6 +581,22 @@ router.post(
           nomeFornecedor,
           fornecedorId,
           categoria,
+          ncm || null,
+          cest || null,
+          origemMercadoria || null,
+          cstIcms || null,
+          csosn || null,
+          cfop || null,
+          cstIbsCbs || null,
+          cclassTrib || null,
+          cstPis || null,
+          aliquotaPis,
+          cstCofins || null,
+          aliquotaCofins,
+          aliquotaIcms,
+          aliquotaIbsUf,
+          aliquotaIbsMunicipal,
+          aliquotaCbs,
           unidade,
           pesavel,
           plu || null,
@@ -653,6 +758,104 @@ router.patch(
           ? produto.categoria
           : texto(req.body.categoria)
 
+      const ncm =
+        req.body.ncm === undefined
+          ? produto.ncm
+          : texto(req.body.ncm)
+
+      const cest =
+        req.body.cest === undefined
+          ? produto.cest
+          : texto(req.body.cest)
+
+      const origemMercadoria =
+        req.body.origemMercadoria === undefined
+          ? produto.origemMercadoria
+          : texto(req.body.origemMercadoria)
+
+      const cstIcms =
+        req.body.cstIcms === undefined
+          ? produto.cstIcms
+          : texto(req.body.cstIcms)
+
+      const csosn =
+        req.body.csosn === undefined
+          ? produto.csosn
+          : texto(req.body.csosn)
+
+      const cfop =
+        req.body.cfop === undefined
+          ? produto.cfop
+          : texto(req.body.cfop)
+
+      const cstIbsCbs =
+        req.body.cstIbsCbs === undefined
+          ? produto.cstIbsCbs
+          : texto(req.body.cstIbsCbs)
+
+      const cclassTrib =
+        req.body.cclassTrib === undefined
+          ? produto.cclassTrib
+          : texto(req.body.cclassTrib)
+
+      const cstPis =
+        req.body.cstPis === undefined
+          ? produto.cstPis
+          : texto(req.body.cstPis)
+
+      const aliquotaPis =
+        req.body.aliquotaPis === undefined
+          ? produto.aliquotaPis
+          : req.body.aliquotaPis === '' ||
+              req.body.aliquotaPis == null
+            ? null
+            : Number(req.body.aliquotaPis)
+
+      const cstCofins =
+        req.body.cstCofins === undefined
+          ? produto.cstCofins
+          : texto(req.body.cstCofins)
+
+      const aliquotaCofins =
+        req.body.aliquotaCofins === undefined
+          ? produto.aliquotaCofins
+          : req.body.aliquotaCofins === '' ||
+              req.body.aliquotaCofins == null
+            ? null
+            : Number(req.body.aliquotaCofins)
+
+      const aliquotaIcms =
+        req.body.aliquotaIcms === undefined
+          ? produto.aliquotaIcms
+          : req.body.aliquotaIcms === '' ||
+              req.body.aliquotaIcms == null
+            ? null
+            : Number(req.body.aliquotaIcms)
+
+      const aliquotaIbsUf =
+        req.body.aliquotaIbsUf === undefined
+          ? produto.aliquotaIbsUf
+          : req.body.aliquotaIbsUf === '' ||
+              req.body.aliquotaIbsUf == null
+            ? null
+            : Number(req.body.aliquotaIbsUf)
+
+      const aliquotaIbsMunicipal =
+        req.body.aliquotaIbsMunicipal === undefined
+          ? produto.aliquotaIbsMunicipal
+          : req.body.aliquotaIbsMunicipal === '' ||
+              req.body.aliquotaIbsMunicipal == null
+            ? null
+            : Number(req.body.aliquotaIbsMunicipal)
+
+      const aliquotaCbs =
+        req.body.aliquotaCbs === undefined
+          ? produto.aliquotaCbs
+          : req.body.aliquotaCbs === '' ||
+              req.body.aliquotaCbs == null
+            ? null
+            : Number(req.body.aliquotaCbs)
+
       const unidade =
         req.body.unidade === undefined
           ? produto.unidade
@@ -805,17 +1008,32 @@ router.patch(
             fornecedor = $7,
             fornecedor_id = $8,
             categoria = $9,
-            unidade = $10,
-            pesavel = $11,
-            plu = $12,
-            etiqueta_ativa = $13,
-            ativo = $14,
-            clube_ativo = $15,
-            preco_clube = $16,
-            atualizado_em =
-              CURRENT_TIMESTAMP
-          WHERE id = $17
-            AND empresa_id = $18
+            ncm = $10,
+            cest = $11,
+            origem_mercadoria = $12,
+            cst_icms = $13,
+            csosn = $14,
+            cfop = $15,
+            cst_ibs_cbs = $16,
+            cclass_trib = $17,
+            cst_pis = $18,
+            aliquota_pis = $19,
+            cst_cofins = $20,
+            aliquota_cofins = $21,
+            aliquota_icms = $22,
+            aliquota_ibs_uf = $23,
+            aliquota_ibs_municipal = $24,
+            aliquota_cbs = $25,
+            unidade = $26,
+            pesavel = $27,
+            plu = $28,
+            etiqueta_ativa = $29,
+            ativo = $30,
+            clube_ativo = $31,
+            preco_clube = $32,
+            atualizado_em = CURRENT_TIMESTAMP
+          WHERE id = $33
+            AND empresa_id = $34
           RETURNING *
           `,
           [
@@ -828,6 +1046,22 @@ router.patch(
             nomeFornecedor,
             fornecedorId,
             categoria,
+            ncm || null,
+            cest || null,
+            origemMercadoria || null,
+            cstIcms || null,
+            csosn || null,
+            cfop || null,
+            cstIbsCbs || null,
+            cclassTrib || null,
+            cstPis || null,
+            aliquotaPis,
+            cstCofins || null,
+            aliquotaCofins,
+            aliquotaIcms,
+            aliquotaIbsUf,
+            aliquotaIbsMunicipal,
+            aliquotaCbs,
             unidade,
             pesavel,
             plu || null,
