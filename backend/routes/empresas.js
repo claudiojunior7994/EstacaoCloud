@@ -21,7 +21,13 @@ router.get('/minha-empresa',
           cidade, estado, cep, inscricao_estadual,
           regime_tributario, codigo_municipio_ibge,
           nfce_ambiente, nfce_serie, nfce_proximo_numero,
-          nfce_csc_id, nfce_csc, nfce_habilitada,
+          nfce_csc_id,
+          CASE
+            WHEN nfce_csc IS NOT NULL AND LENGTH(TRIM(nfce_csc)) > 0
+            THEN TRUE
+            ELSE FALSE
+          END AS nfce_csc_configurado,
+          nfce_habilitada,
           mensagem_comprovante, permite_estoque_negativo, ativa
         FROM empresas
         WHERE id=$1
@@ -76,7 +82,11 @@ router.patch('/minha-empresa',
         nfceSerie: req.body.nfceSerie === undefined ? e.nfce_serie : Number(req.body.nfceSerie),
         nfceProximoNumero: req.body.nfceProximoNumero === undefined ? e.nfce_proximo_numero : Number(req.body.nfceProximoNumero),
         nfceCscId: req.body.nfceCscId === undefined ? e.nfce_csc_id : texto(req.body.nfceCscId),
-        nfceCsc: req.body.nfceCsc === undefined ? e.nfce_csc : texto(req.body.nfceCsc),
+        nfceCsc:
+          req.body.nfceCsc === undefined ||
+          texto(req.body.nfceCsc) === ''
+            ? e.nfce_csc
+            : texto(req.body.nfceCsc),
         nfceHabilitada: req.body.nfceHabilitada === undefined ? e.nfce_habilitada : Boolean(req.body.nfceHabilitada),
         mensagemComprovante: req.body.mensagemComprovante === undefined ? e.mensagem_comprovante : texto(req.body.mensagemComprovante),
         permiteEstoqueNegativo:
@@ -121,7 +131,38 @@ router.patch('/minha-empresa',
           permite_estoque_negativo=$24,
           atualizada_em=CURRENT_TIMESTAMP
         WHERE id=$25
-        RETURNING *
+        RETURNING
+          id,
+          nome,
+          nome_fantasia,
+          cnpj,
+          email,
+          telefone,
+          endereco,
+          logradouro,
+          numero_endereco,
+          complemento,
+          bairro,
+          cidade,
+          estado,
+          cep,
+          inscricao_estadual,
+          regime_tributario,
+          codigo_municipio_ibge,
+          nfce_ambiente,
+          nfce_serie,
+          nfce_proximo_numero,
+          nfce_csc_id,
+          CASE
+            WHEN nfce_csc IS NOT NULL
+              AND LENGTH(TRIM(nfce_csc)) > 0
+            THEN TRUE
+            ELSE FALSE
+          END AS nfce_csc_configurado,
+          nfce_habilitada,
+          mensagem_comprovante,
+          permite_estoque_negativo,
+          ativa
       `, [
         dados.nome,
         dados.nomeFantasia || null,

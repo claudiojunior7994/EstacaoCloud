@@ -1850,3 +1850,80 @@ body {
 .pdv-tef-status span {
   opacity: 0.9;
 }
+
+
+/* ESTAÇÃOCLOUD - IMPRESSÃO TÉRMICA */
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 2mm;
+  }
+
+  html,
+  body,
+  #root {
+    width: 80mm !important;
+    height: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #ec-danfe-impressao,
+  #ec-danfe-impressao * {
+    visibility: visible !important;
+  }
+
+  #ec-danfe-impressao {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+
+    width: 76mm !important;
+    max-width: 76mm !important;
+
+    margin: 0 !important;
+    padding: 2mm !important;
+
+    background: #fff !important;
+    color: #000 !important;
+
+    font-family:
+      "Courier New",
+      monospace !important;
+
+    font-size: 9pt !important;
+    line-height: 1.25 !important;
+
+    box-shadow: none !important;
+    border: 0 !important;
+
+    overflow: visible !important;
+  }
+
+  #ec-danfe-impressao strong {
+    color: #000 !important;
+  }
+
+  .ec-modal-overlay,
+  .ec-modal-sangria {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}
