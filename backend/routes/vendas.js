@@ -4,6 +4,9 @@ const { pool } = require('../database/db')
 const autenticar = require('../middleware/auth')
 const permitirPerfis = require('../middleware/permissao')
 const { processarTef } = require('../services/tef')
+const {
+  gerarChaveAcesso,
+} = require('../services/fiscal/nfce')
 
 const router = express.Router()
 
@@ -931,6 +934,18 @@ router.post(
           )
         }
 
+        const identificacaoNfce =
+          gerarChaveAcesso({
+            uf: empresaFiscal.estado,
+            dataEmissao:
+              venda.criada_em || new Date(),
+            cnpj: empresaFiscal.cnpj,
+            modelo: 65,
+            serie: serieNfce,
+            numero: numeroNfce,
+            tipoEmissao: 1,
+          })
+
         const resultadoNfce =
           await client.query(
             `
@@ -941,10 +956,14 @@ router.post(
               serie,
               numero,
               status,
-              documento_consumidor
+              documento_consumidor,
+              chave_acesso,
+              codigo_numerico,
+              digito_verificador
             )
             VALUES (
-              $1, $2, $3, $4, $5, 'pendente', $6
+              $1, $2, $3, $4, $5,
+              'pendente', $6, $7, $8, $9
             )
             RETURNING *
             `,
@@ -955,6 +974,9 @@ router.post(
               serieNfce,
               numeroNfce,
               documentoConsumidorNormalizado || null,
+              identificacaoNfce.chave,
+              identificacaoNfce.codigoNumerico,
+              identificacaoNfce.dv,
             ],
           )
 
@@ -1184,6 +1206,10 @@ router.post(
               numero: nfce.numero,
               ambiente: nfce.ambiente,
               status: nfce.status,
+              chaveAcesso:
+                nfce.chave_acesso || null,
+              protocolo:
+                nfce.protocolo || null,
               documentoConsumidor:
                 nfce.documento_consumidor || '',
             }

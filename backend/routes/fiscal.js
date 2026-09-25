@@ -3,6 +3,10 @@ const express = require('express')
 const { pool } = require('../database/db')
 const autenticar = require('../middleware/auth')
 const permitirPerfis = require('../middleware/permissao')
+const {
+  validarPreflight,
+  endpointsSefaz,
+} = require('../services/fiscal/nfce')
 
 const router = express.Router()
 
@@ -30,6 +34,141 @@ function mapNfce(row) {
     autorizadaEm: row.autorizada_em,
   }
 }
+
+
+router.get(
+  '/preflight',
+  autenticar,
+  permitirPerfis('admin', 'gerente'),
+  async (req, res) => {
+    try {
+      const resultado = await pool.query(
+        `
+        SELECT
+          cnpj,
+          inscricao_estadual,
+          estado,
+          cidade,
+          codigo_municipio_ibge,
+          regime_tributario,
+          nfce_habilitada,
+          nfce_ambiente,
+          nfce_serie,
+          nfce_proximo_numero,
+          nfce_csc_id,
+          nfce_csc
+        FROM empresas
+        WHERE id = $1
+        `,
+        [req.usuario.empresaId],
+      )
+
+      const empresa = resultado.rows[0]
+
+      if (!empresa) {
+        return res.status(404).json({
+          erro: 'Empresa não encontrada.',
+        })
+      }
+
+      const diagnostico =
+        validarPreflight(empresa)
+
+      return res.json({
+        nfceHabilitada:
+          empresa.nfce_habilitada === true,
+
+        diagnostico: {
+          ...diagnostico,
+
+          /*
+           * O CSC nunca sai desta API.
+           * Apenas informamos se a configuração existe.
+           */
+          cscConfigurado:
+            Boolean(
+              String(
+                empresa.nfce_csc || '',
+              ).trim(),
+            ),
+        },
+      })
+    } catch (erro) {
+      console.error(
+        'Erro no preflight fiscal:',
+        erro,
+      )
+
+      return res.status(500).json({
+        erro:
+          'Não foi possível executar o diagnóstico fiscal.',
+      })
+    }
+  },
+)
+
+router.get(
+  '/sefaz/endpoints',
+  autenticar,
+  permitirPerfis('admin', 'gerente'),
+  async (req, res) => {
+    try {
+      const resultado = await pool.query(
+        `
+        SELECT
+          estado,
+          nfce_ambiente
+        FROM empresas
+        WHERE id = $1
+        `,
+        [req.usuario.empresaId],
+      )
+
+      const empresa = resultado.rows[0]
+
+      if (!empresa) {
+        return res.status(404).json({
+          erro: 'Empresa não encontrada.',
+        })
+      }
+
+      const endpoints =
+        endpointsSefaz({
+          uf: empresa.estado,
+          ambiente:
+            empresa.nfce_ambiente ||
+            'homologacao',
+        })
+
+      if (!endpoints) {
+        return res.status(501).json({
+          erro:
+            'Autorizador desta UF ainda não foi cadastrado no EstacaoCloud.',
+          uf: empresa.estado,
+        })
+      }
+
+      return res.json({
+        uf: empresa.estado,
+        ambiente:
+          empresa.nfce_ambiente,
+        versao: '4.00',
+        modelo: 65,
+        endpoints,
+      })
+    } catch (erro) {
+      console.error(
+        'Erro ao carregar endpoints SEFAZ:',
+        erro,
+      )
+
+      return res.status(500).json({
+        erro:
+          'Não foi possível carregar os endpoints SEFAZ.',
+      })
+    }
+  },
+)
 
 router.get(
   '/configuracao',
