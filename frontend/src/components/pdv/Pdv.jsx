@@ -32,6 +32,9 @@ function Pdv({ usuario, token, onSair }) {
   const [abrindoCaixa, setAbrindoCaixa] = useState(false)
 
   // PAGAMENTO
+  // DANFE / comprovante da última venda
+  const [danfeVenda, setDanfeVenda] = useState(null)
+
   const [modalPagamento, setModalPagamento] = useState(false)
   const [formaPagamento, setFormaPagamento] = useState('')
   const [valorRecebido, setValorRecebido] = useState('')
@@ -162,14 +165,6 @@ function Pdv({ usuario, token, onSair }) {
       )
 
       const dados = await resposta.json()
-
-      if (possuiPagamentoCartao) {
-        setProcessandoTef(false)
-
-        if (resposta.ok) {
-          setMensagemTef('Pagamento aprovado.')
-        }
-      }
 
       if (!resposta.ok) {
         throw new Error(
@@ -912,7 +907,31 @@ function Pdv({ usuario, token, onSair }) {
           `\nTroco: ${formatarMoeda(troco)}`
       }
 
-      alert(mensagem)
+      const recebidoDinheiro =
+        formaPagamento === 'Dinheiro'
+          ? converterValor(valorRecebido)
+          : null
+
+      setDanfeVenda({
+        venda,
+        nfce: dados.nfce || null,
+        formaPagamento,
+        pagamentos:
+          formaPagamento === 'Pagamento Misto'
+            ? pagamentosVenda
+            : [{
+                formaPagamento,
+                valor: Number(venda?.total || totalVenda),
+              }],
+        recebido: recebidoDinheiro,
+        troco:
+          formaPagamento === 'Dinheiro'
+            ? troco
+            : 0,
+        documentoConsumidor:
+          documentoConsumidor.replace(/\\D/g, ''),
+        emitidoEm: new Date().toISOString(),
+      })
 
       setModalPagamento(false)
       setFormaPagamento('')
@@ -2082,6 +2101,241 @@ function Pdv({ usuario, token, onSair }) {
               </button>
             </div>
 
+          </section>
+        </div>
+      )}
+
+
+      {danfeVenda && (
+        <div className="ec-modal-overlay">
+          <section
+            className="ec-modal-sangria"
+            style={{
+              width: 'min(520px, calc(100vw - 30px))',
+              maxWidth: '520px',
+              maxHeight: 'calc(100vh - 30px)',
+              overflowY: 'auto',
+            }}
+          >
+            <div className="ec-modal-cabecalho">
+              <div>
+                <span>VENDA CONCLUÍDA</span>
+                <h2>
+                  {danfeVenda.nfce
+                    ? 'DANFE NFC-e'
+                    : 'Comprovante de venda'}
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                className="ec-modal-fechar"
+                onClick={() => {
+                  setDanfeVenda(null)
+                  focarCodigo()
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              id="ec-danfe-impressao"
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '12px',
+                color: '#111',
+                background: '#fff',
+                padding: '18px',
+              }}
+            >
+              <div
+                style={{
+                  textAlign: 'center',
+                  borderBottom: '1px dashed #222',
+                  paddingBottom: '10px',
+                  marginBottom: '10px',
+                }}
+              >
+                <strong style={{ fontSize: '16px' }}>
+                  ESTAÇÃOCLOUD
+                </strong>
+
+                <div>Documento Auxiliar da Venda</div>
+
+                {danfeVenda.nfce && (
+                  <>
+                    <div>
+                      NFC-e modelo 65 — Série{' '}
+                      {danfeVenda.nfce.serie} — Nº{' '}
+                      {danfeVenda.nfce.numero}
+                    </div>
+
+                    <strong>
+                      {danfeVenda.nfce.status === 'autorizada'
+                        ? 'NFC-e AUTORIZADA'
+                        : danfeVenda.nfce.ambiente === 'homologacao'
+                          ? 'AMBIENTE DE HOMOLOGAÇÃO — SEM VALOR FISCAL'
+                          : 'NFC-e PENDENTE DE AUTORIZAÇÃO'}
+                    </strong>
+                  </>
+                )}
+              </div>
+
+              <div>
+                Venda: #{danfeVenda.venda?.id}
+              </div>
+
+              <div>
+                Terminal: {danfeVenda.venda?.terminal || TERMINAL}
+              </div>
+
+              <div>
+                Data:{' '}
+                {new Date(
+                  danfeVenda.emitidoEm,
+                ).toLocaleString('pt-BR')}
+              </div>
+
+              {danfeVenda.documentoConsumidor && (
+                <div>
+                  CPF/CNPJ consumidor:{' '}
+                  {danfeVenda.documentoConsumidor}
+                </div>
+              )}
+
+              <div
+                style={{
+                  borderTop: '1px dashed #222',
+                  borderBottom: '1px dashed #222',
+                  margin: '10px 0',
+                  padding: '8px 0',
+                }}
+              >
+                {(danfeVenda.venda?.itens || []).map(
+                  (item, indice) => (
+                    <div
+                      key={`${item.produtoId}-${indice}`}
+                      style={{ marginBottom: '7px' }}
+                    >
+                      <div>
+                        {indice + 1}. {item.nome}
+                      </div>
+
+                      <div>
+                        {Number(item.quantidade).toFixed(3)} x{' '}
+                        {formatarMoeda(item.precoUnitario)}
+                        {' = '}
+                        <strong>
+                          {formatarMoeda(item.subtotal)}
+                        </strong>
+                      </div>
+                    </div>
+                  ),
+                )}
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <strong>TOTAL</strong>
+                <strong>
+                  {formatarMoeda(danfeVenda.venda?.total)}
+                </strong>
+              </div>
+
+              <div style={{ marginTop: '10px' }}>
+                {(danfeVenda.pagamentos || []).map(
+                  (pagamento, indice) => (
+                    <div
+                      key={`${pagamento.formaPagamento}-${indice}`}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <span>{pagamento.formaPagamento}</span>
+                      <span>
+                        {formatarMoeda(pagamento.valor)}
+                      </span>
+                    </div>
+                  ),
+                )}
+
+                {danfeVenda.recebido !== null && (
+                  <>
+                    <div>
+                      Recebido:{' '}
+                      {formatarMoeda(danfeVenda.recebido)}
+                    </div>
+
+                    <div>
+                      Troco:{' '}
+                      {formatarMoeda(danfeVenda.troco)}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {danfeVenda.nfce && (
+                <div
+                  style={{
+                    borderTop: '1px dashed #222',
+                    marginTop: '12px',
+                    paddingTop: '10px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <div>
+                    NFC-e {danfeVenda.nfce.serie}/
+                    {danfeVenda.nfce.numero}
+                  </div>
+
+                  <div>
+                    Status: {danfeVenda.nfce.status}
+                  </div>
+
+                  {danfeVenda.nfce.status !== 'autorizada' && (
+                    <strong>
+                      DOCUMENTO AINDA NÃO AUTORIZADO PELA SEFAZ
+                    </strong>
+                  )}
+                </div>
+              )}
+
+              <div
+                style={{
+                  textAlign: 'center',
+                  marginTop: '14px',
+                }}
+              >
+                Obrigado pela preferência.
+              </div>
+            </div>
+
+            <div className="ec-modal-acoes">
+              <button
+                type="button"
+                className="ec-botao-secundario"
+                onClick={() => {
+                  setDanfeVenda(null)
+                  focarCodigo()
+                }}
+              >
+                Nova venda
+              </button>
+
+              <button
+                type="button"
+                className="ec-botao-principal"
+                onClick={() => window.print()}
+              >
+                Imprimir
+              </button>
+            </div>
           </section>
         </div>
       )}
