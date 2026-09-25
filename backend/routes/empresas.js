@@ -10,6 +10,27 @@ function texto(v) {
   return String(v == null ? '' : v).trim()
 }
 
+function booleano(v, padrao = false) {
+  if (v === undefined || v === null) {
+    return padrao
+  }
+
+  if (typeof v === 'boolean') {
+    return v
+  }
+
+  if (typeof v === 'string') {
+    return [
+      'true',
+      '1',
+      'sim',
+      'on',
+    ].includes(v.trim().toLowerCase())
+  }
+
+  return Boolean(v)
+}
+
 router.get('/minha-empresa',
   autenticar,
   async (req,res) => {
@@ -87,12 +108,15 @@ router.patch('/minha-empresa',
           texto(req.body.nfceCsc) === ''
             ? e.nfce_csc
             : texto(req.body.nfceCsc),
-        nfceHabilitada: req.body.nfceHabilitada === undefined ? e.nfce_habilitada : Boolean(req.body.nfceHabilitada),
+        nfceHabilitada:
+          req.body.nfceHabilitada === undefined
+            ? e.nfce_habilitada
+            : booleano(req.body.nfceHabilitada),
         mensagemComprovante: req.body.mensagemComprovante === undefined ? e.mensagem_comprovante : texto(req.body.mensagemComprovante),
         permiteEstoqueNegativo:
           req.body.permiteEstoqueNegativo === undefined
             ? e.permite_estoque_negativo
-            : Boolean(req.body.permiteEstoqueNegativo)
+            : booleano(req.body.permiteEstoqueNegativo)
       }
 
       if (!dados.nome) {

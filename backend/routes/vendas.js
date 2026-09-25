@@ -503,6 +503,7 @@ router.post(
 
           // Snapshot fiscal do produto no momento da venda
           codigoBarras: produto.codigo_barras || null,
+          unidade: produto.unidade || 'UN',
           ncm: produto.ncm || null,
           cest: produto.cest || null,
           origemMercadoria:
@@ -1023,6 +1024,7 @@ router.post(
             preco_unitario,
             subtotal,
             codigo_barras,
+            unidade,
             ncm,
             cest,
             origem_mercadoria,
@@ -1045,7 +1047,7 @@ router.post(
             $6, $7, $8, $9, $10,
             $11, $12, $13, $14, $15,
             $16, $17, $18, $19, $20,
-            $21, $22, $23
+            $21, $22, $23, $24
           )
           `,
           [
@@ -1056,6 +1058,7 @@ router.post(
             item.precoUnitario,
             item.subtotal,
             item.codigoBarras,
+            item.unidade,
             item.ncm,
             item.cest,
             item.origemMercadoria,
@@ -1318,6 +1321,57 @@ router.patch(
       }
 
       const venda = resultadoVenda.rows[0]
+
+      /*
+       * Uma venda com documento fiscal autorizado não pode
+       * ser simplesmente cancelada localmente.
+       *
+       * O cancelamento deverá ocorrer através do evento
+       * fiscal da NFC-e e somente depois refletir no estoque
+       * e no caixa.
+       */
+      const fiscalVenda = await client.query(
+        `
+        SELECT
+          id,
+          status,
+          chave_acesso,
+          protocolo
+        FROM nfce
+        WHERE empresa_id = $1
+          AND venda_id = $2
+        LIMIT 1
+        FOR UPDATE
+        `,
+        [
+          req.usuario.empresaId,
+          venda.id,
+        ],
+      )
+
+      const nfceVenda =
+        fiscalVenda.rows[0] || null
+
+      if (
+        nfceVenda &&
+        nfceVenda.status === 'autorizada'
+      ) {
+        await client.query('ROLLBACK')
+
+        return res.status(409).json({
+          erro:
+            'Esta venda possui NFC-e autorizada. O cancelamento deve ser realizado pelo fluxo fiscal.',
+          codigo:
+            'NFCE_CANCELAMENTO_FISCAL_OBRIGATORIO',
+          nfce: {
+            id: nfceVenda.id,
+            chaveAcesso:
+              nfceVenda.chave_acesso,
+            protocolo:
+              nfceVenda.protocolo,
+          },
+        })
+      }
 
       if (venda.status === 'cancelada') {
         await client.query('ROLLBACK')

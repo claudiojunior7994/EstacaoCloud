@@ -331,6 +331,110 @@ function validarPreflight(empresa) {
   }
 }
 
+
+async function buscarDadosEmissao(nfceId) {
+  const { pool } = require('../../database/db')
+
+  const resultado = await pool.query(
+    `
+    SELECT
+      n.*,
+
+      v.criada_em AS venda_criada_em,
+      v.subtotal AS venda_subtotal,
+      v.desconto AS venda_desconto,
+      v.total AS venda_total,
+      v.forma_pagamento,
+      v.terminal,
+
+      e.nome AS empresa_nome,
+      e.nome_fantasia,
+      e.cnpj,
+      e.inscricao_estadual,
+      e.telefone,
+      e.logradouro,
+      e.numero_endereco,
+      e.complemento,
+      e.bairro,
+      e.cidade,
+      e.estado,
+      e.cep,
+      e.codigo_municipio_ibge,
+      e.regime_tributario,
+      e.nfce_csc_id
+
+    FROM nfce n
+
+    INNER JOIN vendas v
+      ON v.id = n.venda_id
+     AND v.empresa_id = n.empresa_id
+
+    INNER JOIN empresas e
+      ON e.id = n.empresa_id
+
+    WHERE n.id = $1
+    LIMIT 1
+    `,
+    [nfceId],
+  )
+
+  const nfce = resultado.rows[0]
+
+  if (!nfce) {
+    throw new Error(
+      'NFC-e não encontrada para emissão.',
+    )
+  }
+
+  const itensResultado = await pool.query(
+    `
+    SELECT
+      *
+    FROM venda_itens
+    WHERE venda_id = $1
+    ORDER BY id
+    `,
+    [nfce.venda_id],
+  )
+
+  const pagamentosResultado =
+    await pool.query(
+      `
+      SELECT
+        forma_pagamento,
+        valor
+      FROM venda_pagamentos
+      WHERE venda_id = $1
+      ORDER BY id
+      `,
+      [nfce.venda_id],
+    )
+
+  let pagamentos =
+    pagamentosResultado.rows
+
+  /*
+   * Compatibilidade com vendas históricas anteriores
+   * à tabela venda_pagamentos.
+   */
+  if (!pagamentos.length) {
+    pagamentos = [
+      {
+        forma_pagamento:
+          nfce.forma_pagamento,
+        valor:
+          Number(nfce.venda_total || 0),
+      },
+    ]
+  }
+
+  return {
+    nfce,
+    itens: itensResultado.rows,
+    pagamentos,
+  }
+}
+
 module.exports = {
   CODIGOS_UF,
   calcularDvChave,
@@ -338,4 +442,5 @@ module.exports = {
   gerarChaveAcesso,
   endpointsSefaz,
   validarPreflight,
+  buscarDadosEmissao,
 }

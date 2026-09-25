@@ -8,6 +8,10 @@ const {
   endpointsSefaz,
 } = require('../services/fiscal/nfce')
 
+const {
+  gerarXmlNfce,
+} = require('../services/fiscal/emissor')
+
 const router = express.Router()
 
 function mapNfce(row) {
@@ -347,6 +351,126 @@ router.get(
 
       return res.status(500).json({
         erro: 'Não foi possível consultar a NFC-e.',
+      })
+    }
+  },
+)
+
+
+/*
+ * Gera o XML de trabalho da NFC-e.
+ *
+ * NÃO assina.
+ * NÃO transmite.
+ * NÃO autoriza.
+ *
+ * Esta rota existe para validar a estrutura fiscal antes
+ * de conectar certificado digital e SEFAZ.
+ */
+router.post(
+  '/nfce/:id/preparar-xml',
+  autenticar,
+  permitirPerfis('admin', 'gerente'),
+  async (req, res) => {
+    try {
+      const resultado = await pool.query(
+        `
+        SELECT *
+        FROM nfce
+        WHERE id = $1
+          AND empresa_id = $2
+        LIMIT 1
+        `,
+        [
+          req.params.id,
+          req.usuario.empresaId,
+        ],
+      )
+
+      const nota = resultado.rows[0]
+
+      if (!nota) {
+        return res.status(404).json({
+          erro: 'NFC-e não encontrada.',
+        })
+      }
+
+      if (nota.status === 'autorizada') {
+        return res.status(409).json({
+          erro:
+            'NFC-e já autorizada não pode ter XML de envio recriado.',
+        })
+      }
+
+      const {
+        dados,
+        xml,
+      } = await gerarXmlNfce(nota.id)
+
+      if (
+        !xml ||
+        typeof xml !== 'string'
+      ) {
+        throw new Error(
+          'O gerador fiscal não retornou XML válido.',
+        )
+      }
+
+      await pool.query(
+        `
+        UPDATE nfce
+        SET
+          xml_envio = $1,
+          atualizada_em =
+            CURRENT_TIMESTAMP
+        WHERE id = $2
+          AND empresa_id = $3
+        `,
+        [
+          xml,
+          nota.id,
+          req.usuario.empresaId,
+        ],
+      )
+
+      return res.json({
+        mensagem:
+          'XML NFC-e preparado. Documento ainda não foi assinado nem transmitido.',
+        nfce: {
+          id: nota.id,
+          serie: Number(nota.serie),
+          numero: Number(nota.numero),
+          chaveAcesso:
+            nota.chave_acesso,
+          status:
+            nota.status,
+        },
+        xmlPreparado: true,
+        tamanhoXml:
+          Buffer.byteLength(xml, 'utf8'),
+        resumo: {
+          modelo:
+            dados?.identificacao?.modelo,
+          ambiente:
+            nota.ambiente,
+          quantidadeItens:
+            Array.isArray(dados?.produtos)
+              ? dados.produtos.length
+              : 0,
+        },
+      })
+    } catch (erro) {
+      console.error(
+        'Erro ao preparar XML NFC-e:',
+        erro,
+      )
+
+      return res.status(422).json({
+        erro:
+          erro.message ||
+          'Não foi possível preparar o XML NFC-e.',
+        codigo:
+          'NFCE_XML_INVALIDO',
       })
     }
   },

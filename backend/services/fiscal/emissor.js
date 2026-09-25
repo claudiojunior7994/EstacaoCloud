@@ -92,8 +92,13 @@ function mapearFormaPagamento(forma) {
     Cheque: '02',
     Crédito: '03',
     Credito: '03',
+    'Cartão de crédito': '03',
+    'Cartao de credito': '03',
+
     Débito: '04',
     Debito: '04',
+    'Cartão de débito': '04',
+    'Cartao de debito': '04',
     'Vale Alimentação': '10',
     'Vale Refeição': '11',
     'Vale Presente': '12',
@@ -204,7 +209,8 @@ function montarProduto(item, indice, crt) {
     descricao: String(item.nome_produto),
     ncm: somenteNumeros(item.ncm),
     cfop: somenteNumeros(item.cfop),
-    unidade: 'UN',
+    unidade:
+      String(item.unidade || 'UN').trim().toUpperCase(),
     quantidade,
     valorUnitario,
     valorTotal,
