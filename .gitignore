@@ -35,3 +35,9 @@ conectar-*.cjs
 corrigir-*.cjs
 endurecer-seguranca.cjs
 preparar-desktop.cjs
+
+# EstacaoCloud - certificados fiscais
+*.pfx
+*.p12
+backend/certificados/
+certificados/

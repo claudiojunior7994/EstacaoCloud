@@ -11,6 +11,11 @@ const {
 const {
   gerarXmlNfce,
 } = require('../services/fiscal/emissor')
+const {
+  diagnosticarCertificado,
+  diagnosticarOpenSsl,
+  verificarPfxComOpenSsl,
+} = require('../services/fiscal/certificado')
 
 const router = express.Router()
 
@@ -39,6 +44,96 @@ function mapNfce(row) {
   }
 }
 
+
+router.get(
+  '/certificado/diagnostico',
+  autenticar,
+  permitirPerfis('admin', 'gerente'),
+  async (req, res) => {
+    try {
+      const certificado =
+        diagnosticarCertificado()
+
+      const openssl =
+        diagnosticarOpenSsl()
+
+      return res.json({
+        certificado,
+        openssl,
+
+        prontoParaValidacao:
+          certificado.configurado &&
+          certificado.arquivoExiste &&
+          certificado.extensaoValida &&
+          certificado.senhaConfigurada &&
+          openssl.disponivel,
+
+        seguranca: {
+          senhaExposta: false,
+          certificadoExposto: false,
+        },
+      })
+    } catch (erro) {
+      console.error(
+        'Erro no diagnóstico do certificado:',
+        erro,
+      )
+
+      return res.status(500).json({
+        erro:
+          'Não foi possível diagnosticar o certificado A1.',
+      })
+    }
+  },
+)
+
+router.post(
+  '/certificado/validar',
+  autenticar,
+  permitirPerfis('admin'),
+  async (req, res) => {
+    try {
+      const resultado =
+        verificarPfxComOpenSsl()
+
+      if (!resultado.valido) {
+        return res.status(422).json({
+          valido: false,
+          motivo:
+            resultado.motivo,
+          certificado:
+            resultado.diagnostico,
+          openssl:
+            resultado.openssl,
+        })
+      }
+
+      return res.json({
+        valido: true,
+        mensagem:
+          'Arquivo PKCS#12 aberto com sucesso.',
+        certificado:
+          resultado.diagnostico,
+        openssl:
+          resultado.openssl,
+
+        observacao:
+          'Esta validação não transmite documento fiscal.',
+      })
+    } catch (erro) {
+      console.error(
+        'Erro ao validar certificado:',
+        erro,
+      )
+
+      return res.status(422).json({
+        valido: false,
+        erro:
+          'Não foi possível validar o certificado A1.',
+      })
+    }
+  },
+)
 
 router.get(
   '/preflight',
