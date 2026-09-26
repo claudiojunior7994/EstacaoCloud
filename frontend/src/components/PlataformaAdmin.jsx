@@ -33,7 +33,7 @@ function PlataformaAdmin({ onVoltar }) {
     }
   })
 
-  const [email, setEmail] = useState('admin@estacaogroup.local')
+  const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('123456')
   const [erroLogin, setErroLogin] = useState('')
   const [entrando, setEntrando] = useState(false)

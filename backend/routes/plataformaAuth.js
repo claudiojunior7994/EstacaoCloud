@@ -6,9 +6,13 @@ const { pool } = require('../database/db')
 
 const router = express.Router()
 
-const JWT_SECRET =
-  process.env.JWT_SECRET ||
-  'estacaocloud-dev-secret-alterar-em-producao'
+const JWT_SECRET = process.env.JWT_SECRET
+
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error(
+    'JWT_SECRET ausente ou inseguro. Configure uma chave com pelo menos 32 caracteres.'
+  )
+}
 
 router.post('/login', async (req, res) => {
   try {

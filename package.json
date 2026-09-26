@@ -27,7 +27,8 @@
       "backend/**/*"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "desktop/estacaocloud.ico"
     },
     "nsis": {
       "oneClick": false,

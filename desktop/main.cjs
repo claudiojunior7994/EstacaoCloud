@@ -106,6 +106,7 @@ async function aguardarBackend() {
 
 function criarJanela() {
   janelaPrincipal = new BrowserWindow({
+    icon: path.join(__dirname, 'estacaocloud.ico'),
     width: 1440,
     height: 900,
     minWidth: 1100,
