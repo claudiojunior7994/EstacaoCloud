@@ -3787,8 +3787,8 @@ function App() {
               <p>Nenhum caixa registrado no histórico atual.</p>
             </div>
           ) : (
-            <div className="products-table-wrapper">
-              <table className="products-table">
+            <div className="products-table-wrapper cash-history-table-wrapper">
+              <table className="products-table cash-history-table">
                 <thead>
                   <tr>
                     <th>Caixa</th>
@@ -4044,7 +4044,18 @@ function App() {
           </div>
 
           <div className="quick-actions">
-            <button type="button">🏪 Dados da empresa</button>
+            <button
+              type="button"
+              onClick={podeAdministrarUsuarios ? abrirDadosFiscais : undefined}
+              disabled={!podeAdministrarUsuarios}
+              title={
+                !podeAdministrarUsuarios
+                  ? 'Acesso permitido para administrador'
+                  : 'Abrir dados cadastrais e fiscais da empresa'
+              }
+            >
+              🏪 Dados da empresa
+            </button>
 
             <button
               type="button"
@@ -4855,7 +4866,7 @@ function App() {
               <button
                 type="button"
                 className={`menu-item ${pagina === 'movimentacoes-estoque' ? 'active' : ''}`}
-                onClick={() => abrirPagina('movimentacoes-estoque')}
+                onClick={() => setPagina('movimentacoes-estoque')}
               >
                 🔄 Movimentações
               </button>
@@ -4863,21 +4874,21 @@ function App() {
               <button
                 type="button"
                 className={`menu-item ${pagina === 'inventario' ? 'active' : ''}`}
-                onClick={() => abrirPagina('inventario')}
+                onClick={() => setPagina('inventario')}
               >
                 📋 Inventário
               </button>
 
               <button
             className={`menu-item ${pagina === 'recebimentos' ? 'active' : ''}`}
-            onClick={() => abrirPagina('recebimentos')}
+            onClick={() => setPagina('recebimentos')}
           >
             📥 Recebimento
           </button>
 
               <button
                 className={`menu-item ${pagina === 'validades' ? 'active' : ''}`}
-                onClick={() => abrirPagina('validades')}
+                onClick={() => setPagina('validades')}
               >
                 📅 Lotes / Validades
               </button>
@@ -4885,7 +4896,7 @@ function App() {
           <button
                 type="button"
                 className={`menu-item ${pagina === 'etiquetas' ? 'active' : ''}`}
-                onClick={() => abrirPagina('etiquetas')}
+                onClick={() => setPagina('etiquetas')}
               >
                 🏷️ Etiquetas
               </button>
@@ -4946,7 +4957,7 @@ function App() {
               <button
                 type="button"
                 className={`menu-item ${pagina === 'movimentacoes-estoque' ? 'active' : ''}`}
-                onClick={() => abrirPagina('movimentacoes-estoque')}
+                onClick={() => setPagina('movimentacoes-estoque')}
               >
                 🔄 Estoque
               </button>
@@ -4954,21 +4965,21 @@ function App() {
               <button
                 type="button"
                 className={`menu-item ${pagina === 'inventario' ? 'active' : ''}`}
-                onClick={() => abrirPagina('inventario')}
+                onClick={() => setPagina('inventario')}
               >
                 📋 Inventário
               </button>
 
               <button
             className={`menu-item ${pagina === 'recebimentos' ? 'active' : ''}`}
-            onClick={() => abrirPagina('recebimentos')}
+            onClick={() => setPagina('recebimentos')}
           >
             📥 Recebimento
           </button>
 
               <button
                 className={`menu-item ${pagina === 'validades' ? 'active' : ''}`}
-                onClick={() => abrirPagina('validades')}
+                onClick={() => setPagina('validades')}
               >
                 📅 Lotes / Validades
               </button>
@@ -4976,7 +4987,7 @@ function App() {
           <button
                 type="button"
                 className={`menu-item ${pagina === 'etiquetas' ? 'active' : ''}`}
-                onClick={() => abrirPagina('etiquetas')}
+                onClick={() => setPagina('etiquetas')}
               >
                 🏷️ Etiquetas
               </button>

@@ -1060,3 +1060,44 @@ button {
 .sidebar::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+
+/* FECHAMENTO V1 - HISTORICO DE CAIXAS */
+
+.cash-history-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.cash-history-table {
+  width: max-content;
+  min-width: 1450px;
+  table-layout: auto;
+}
+
+.cash-history-table th,
+.cash-history-table td {
+  width: auto !important;
+  min-width: 92px;
+  white-space: nowrap;
+}
+
+.cash-history-table th:nth-child(1),
+.cash-history-table td:nth-child(1) {
+  min-width: 70px;
+}
+
+.cash-history-table th:nth-child(2),
+.cash-history-table td:nth-child(2),
+.cash-history-table th:nth-child(3),
+.cash-history-table td:nth-child(3) {
+  min-width: 165px;
+}
+
+.cash-history-table th:last-child,
+.cash-history-table td:last-child {
+  width: auto !important;
+  min-width: 95px;
+  white-space: nowrap;
+}
