@@ -143,11 +143,14 @@ function Pdv({ usuario, token, onSair }) {
   }, [formaPagamento, valorRecebido, totalVenda])
 
   function focarCodigo() {
-    setTimeout(() => {
-      if (!modalAbertura && caixaAtual) {
-        campoCodigoRef.current?.focus()
-      }
-    }, 50)
+    if (!modalAbertura && caixaAtual) {
+      requestAnimationFrame(() => {
+        const campo = campoCodigoRef.current
+        if (campo && !campo.disabled) {
+          campo.focus()
+        }
+      })
+    }
   }
 
   async function carregarCaixaAtual() {
@@ -521,7 +524,7 @@ function Pdv({ usuario, token, onSair }) {
     focarCodigo()
   }
 
-  async function buscarProdutoPorCodigo(codigoInformado) {
+  function buscarProdutoPorCodigo(codigoInformado) {
     if (!caixaAtual) {
       setModalAbertura(true)
       return
@@ -530,40 +533,33 @@ function Pdv({ usuario, token, onSair }) {
     const codigoLimpo = String(codigoInformado || '').trim()
 
     if (!codigoLimpo) {
+      focarCodigo()
       return
     }
 
-    try {
-      const resposta = await fetch(
-        `${API_URL}/api/produtos/buscar/codigo/${encodeURIComponent(codigoLimpo)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${tokenAcesso}`,
-          },
-        },
+    // Busca local: evita requisição HTTP a cada leitura do código de barras.
+    const termo = codigoLimpo.toLowerCase()
+
+    const produto = produtos.find((item) => {
+      const codigoBarras = String(item.codigoBarras || '').trim().toLowerCase()
+      const plu = String(item.plu || '').trim().toLowerCase()
+      const nome = String(item.nome || '').trim().toLowerCase()
+
+      return (
+        codigoBarras === termo ||
+        plu === termo ||
+        nome === termo
       )
+    })
 
-      const dados = await resposta.json()
-
-      if (!resposta.ok) {
-        throw new Error(
-          dados.erro || 'Produto não encontrado.',
-        )
-      }
-
-      if (!dados.produto) {
-        throw new Error('Produto não encontrado.')
-      }
-
-      adicionarProduto(dados.produto)
-    } catch (erro) {
-      alert(
-        `${erro.message}\n\nCódigo / PLU: ${codigoLimpo}`,
-      )
-
+    if (!produto) {
+      alert(`Produto não encontrado.\n\nCódigo / PLU: ${codigoLimpo}`)
       setCodigo('')
       focarCodigo()
+      return
     }
+
+    adicionarProduto(produto)
   }
 
   async function tratarCodigo(evento) {
@@ -579,7 +575,7 @@ function Pdv({ usuario, token, onSair }) {
       return
     }
 
-    await buscarProdutoPorCodigo(codigo)
+    buscarProdutoPorCodigo(codigo)
   }
 
   function consultarProduto() {
@@ -1545,6 +1541,12 @@ function Pdv({ usuario, token, onSair }) {
               onChange={(evento) =>
                 setCodigo(evento.target.value)
               }
+              onMouseDown={(evento) => {
+                evento.currentTarget.focus()
+              }}
+              onFocus={(evento) => {
+                evento.currentTarget.focus()
+              }}
               placeholder={
                 !caixaAtual
                   ? 'Abra o caixa para iniciar'
